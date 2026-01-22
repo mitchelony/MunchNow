@@ -1,5 +1,6 @@
 import os
-from supabase.client import create_client, Client
+from supabase.client import create_client, Client # type: ignore
+
 
 url: str = os.environ.get("SUPABASE_URL", "https://dzjxgkzmxpdbqwarqzsa.supabase.co")
 key: str = os.environ.get("SUPABASE_KEY", "sb_secret_vZUZZV53VqbWIs_14rBpyw_VtICv7-w")
@@ -12,7 +13,7 @@ def get_by_category(category):
             .contains("category", [str(category)])
             .execute()
             )
-    return get_by_category
+    return get_by_category.data
 
 def get_all():
     get_all_places = (
@@ -20,7 +21,7 @@ def get_all():
             .select("*")
             .execute()
             )
-    return get_all_places
+    return get_all_places.data
 
 def place_vote(place_id, vote):
     place_a_vote = (
