@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Path
 from app.db.queries import fetch_places, fetch_places_by_id
 
 router = APIRouter()
@@ -14,7 +14,7 @@ async def get_places(
 
 @router.get("/places/{id}")
 async def get_place_by_id(
-    id: int = Query(..., description="Unique identifier of the place", ge=1)
+    id: int = Path(..., description="Unique identifier of the place", ge=1)
 ):
     places = fetch_places_by_id(id)
     return places

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Path
 from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -39,7 +39,7 @@ async def create_vote(
 
 @router.get("/votes/place/{place_id}")
 async def get_votes_for_place(
-    place_id: int = Query(..., description="ID of the place to fetch votes for", gt=0),
+    place_id: int = Path(..., description="ID of the place to fetch votes for", gt=0),
     range_start: Optional[str] = Query(None, description="Start datetime in ISO format (YYYY-MM-DDTHH:MM:SS)"),
     range_end: Optional[str] = Query(None, description="End datetime in ISO format (YYYY-MM-DDTHH:MM:SS)")
 ):
@@ -76,7 +76,7 @@ async def get_votes_for_place(
 
 @router.get("/votes/count/{place_id}")
 async def get_vote_count(
-    place_id: int = Query(..., description="ID of the place to get vote count for", gt=0)
+    place_id: int = Path(..., description="ID of the place to get vote count for", gt=0)
 ):
     """Get total vote count for a specific place"""
     # Call query function
