@@ -1,4 +1,4 @@
-import type { VoteValue } from "@/lib/types";
+import type { VoteValue } from "../lib/types";
 
 type VoteButtonsProps = {
   onVote: (vote: VoteValue) => void;

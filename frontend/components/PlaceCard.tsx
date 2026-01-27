@@ -1,4 +1,4 @@
-import type { Place } from "@/lib/types";
+import type { Place } from "../lib/types";
 
 function formatPriceTier(price?: number | string | null) {
   if (!price) return null;

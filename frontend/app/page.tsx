@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import CategoryChips from "@/components/CategoryChips";
-import PlaceCard from "@/components/PlaceCard";
-import TopBar from "@/components/TopBar";
-import VoteButtons from "@/components/VoteButtons";
-import { getOrCreateSessionId, getTrending, submitVote } from "@/lib/api";
-import { buildMapsQuery, getPreferredMapsLink } from "@/lib/maps";
-import type { Place, VoteValue } from "@/lib/types";
+import CategoryChips from "../components/CategoryChips";
+import PlaceCard from "../components/PlaceCard";
+import TopBar from "../components/TopBar";
+import VoteButtons from "../components/VoteButtons";
+import { getOrCreateSessionId, getTrending, submitVote } from "../lib/api";
+import { buildMapsQuery, getPreferredMapsLink } from "../lib/maps";
+import type { Place, VoteValue } from "../lib/types";
 
 const CATEGORIES = [
   "Quick Bites",
