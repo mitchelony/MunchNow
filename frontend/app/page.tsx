@@ -62,11 +62,10 @@ function computeVoteCounts(place: Place) {
   return { worth, mid, skip, total };
 }
 
-function buildSocialProof(place: Place) {
+function buildStatus(place: Place) {
   if (place.score_hint) return place.score_hint;
   const votes = computeVoteCounts(place);
-  if (votes.worth > 0) return `👍 ${votes.worth} worth it this week`;
-  return "🔥 Trending";
+  return votes.total > 0 ? "Trending" : "Fresh";
 }
 
 function applyVoteToPlace(place: Place, vote: VoteValue) {
@@ -202,43 +201,42 @@ export default function HomePage() {
       <div className="relative overflow-hidden">
         <div className="absolute -top-36 left-0 right-0 h-72 bg-[radial-gradient(circle_at_top,_var(--accent-soft),_transparent)]" />
         <div className="absolute -top-12 right-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,_var(--accent-soft),_transparent)]" />
-        <div className="relative mx-auto flex max-w-[520px] flex-col gap-6 px-4 pb-14 pt-10 sm:max-w-[760px] sm:px-6 lg:max-w-[1150px] lg:gap-8 lg:px-10 xl:max-w-[1220px]">
-          <TopBar />
-
-          <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]">
-            <div className="flex items-center justify-between gap-4">
+        <div className="relative mx-auto flex max-w-[520px] flex-col gap-6 px-4 pb-14 pt-24 sm:max-w-[760px] sm:px-6 lg:max-w-[1200px] lg:gap-8 lg:px-10 xl:max-w-[1320px]">
+          <div className="sticky top-0 z-30 -mx-4 bg-[var(--bg)]/95 px-4 pb-4 pt-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+            <TopBar />
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Popular right now
-                </p>
-                <p className="text-sm font-semibold text-[var(--text)]">
-                  Today&apos;s top picks
-                </p>
+                <h1 className="text-3xl font-semibold text-[var(--text)] sm:text-4xl">
+                  What&apos;s worth it right now?
+                </h1>
+                <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                  <span className="h-2 w-2 animate-pulse-slow rounded-full bg-[var(--accent)]" />
+                  Updated this week • Live votes
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleRefresh}
-                  className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-xs font-semibold text-[var(--text)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                  className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                 >
                   Shuffle picks
                 </button>
-                <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent)]">
+                <span className="rounded-full bg-[var(--accent-soft)] px-3 py-2 text-xs font-semibold text-[var(--accent)]">
                   {places.length} spots
                 </span>
               </div>
             </div>
-          </section>
-
-          <div className="sticky top-0 z-20 -mx-4 bg-[var(--bg)] px-4 py-3 backdrop-blur sm:-mx-6 lg:-mx-10">
-            <CategoryChips
-              categories={CATEGORIES}
-              selected={selectedCategory}
-              onSelect={handleSelectCategory}
-            />
+            <div className="mt-4">
+              <CategoryChips
+                categories={CATEGORIES}
+                selected={selectedCategory}
+                onSelect={handleSelectCategory}
+              />
+            </div>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-start">
+          <div className="grid gap-8 lg:grid-cols-[3fr_2fr] lg:items-start">
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Featured picks</h2>
@@ -265,15 +263,15 @@ export default function HomePage() {
                   {featured.map((place, index) => {
                     const votes = computeVoteCounts(place);
                     const chips = getCategoryChips(place, 2);
-                    const social = buildSocialProof(place);
-                    const meta = `${social} · ${votes.total} votes this week`;
+                    const status = buildStatus(place);
                     return (
                       <PlaceCard
                         key={String(place.id)}
                         place={place}
                         rank={index + 1}
                         chips={chips}
-                        subLabel={meta}
+                        statusLabel={status}
+                        votesLabel={`${votes.total} votes`}
                         size={index === 0 ? "hero" : "stacked"}
                         onSelect={handleSelectPlace}
                       />
@@ -304,24 +302,19 @@ export default function HomePage() {
                   {quickPicks.map((place) => {
                     const votes = computeVoteCounts(place);
                     const chips = getCategoryChips(place, 1);
-                  const quickMeta =
-                    votes.total > 0 ? `${votes.total} votes` : "Fresh pick";
-                  const signal =
-                    votes.worth > 0
-                      ? `${votes.worth} worth it`
-                      : "Trending";
-                  return (
-                    <PlaceCard
-                      key={String(place.id)}
-                      place={place}
-                      chips={chips}
-                      subLabel={quickMeta}
-                      votesLabel={signal}
-                      size="compact"
-                      onSelect={handleSelectPlace}
-                    />
-                  );
-                })}
+                    const status = buildStatus(place);
+                    return (
+                      <PlaceCard
+                        key={String(place.id)}
+                        place={place}
+                        chips={chips}
+                        statusLabel={status}
+                        votesLabel={`${votes.total} votes`}
+                        size="compact"
+                        onSelect={handleSelectPlace}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -334,9 +327,9 @@ export default function HomePage() {
       </div>
 
       {voteTarget ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm md:items-center">
           <div
-            className="w-full max-w-md rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]"
+            className="w-full max-w-md rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] md:max-w-lg"
             onTouchStart={handleSheetTouchStart}
             onTouchMove={handleSheetTouchMove}
           >

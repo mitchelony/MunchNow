@@ -15,7 +15,7 @@ function formatPriceTier(price?: number | string | null) {
 type PlaceCardProps = {
   place: Place;
   chips?: string[];
-  subLabel?: string;
+  statusLabel?: string;
   votesLabel?: string;
   rank?: number;
   size?: "hero" | "stacked" | "compact";
@@ -25,7 +25,7 @@ type PlaceCardProps = {
 export default function PlaceCard({
   place,
   chips,
-  subLabel,
+  statusLabel,
   votesLabel,
   rank,
   size = "compact",
@@ -34,7 +34,7 @@ export default function PlaceCard({
   const price = formatPriceTier(place.price_tier);
 
   const base =
-    "w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-left shadow-[var(--shadow)] transition active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
+    "w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-left shadow-[var(--shadow)] transition hover:-translate-y-0.5 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
   const layout =
     size === "hero"
       ? "p-6"
@@ -43,16 +43,42 @@ export default function PlaceCard({
       : "p-3.5";
 
   return (
-    <button type="button" onClick={() => onSelect(place)} className={`${base} ${layout}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
+    <button
+      type="button"
+      onClick={() => onSelect(place)}
+      className={`${base} ${layout}`}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          {rank ? (
+            <span className="rounded-full bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
+              #{rank}
+            </span>
+          ) : null}
+          <h3
+            className={`font-semibold leading-snug text-[var(--text)] ${
+              size === "hero" ? "text-xl" : "text-base"
+            }`}
+          >
+            {place.name}
+          </h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+          {statusLabel ? <span>{statusLabel}</span> : null}
+          {price ? (
+            <span className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 font-semibold text-[var(--text)]">
+              {price}
+            </span>
+          ) : null}
+        </div>
+        {votesLabel ? (
+          <div className="text-xs font-semibold text-[var(--accent)]">
+            {votesLabel}
+          </div>
+        ) : null}
+        {chips && chips.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
-            {rank ? (
-              <span className="rounded-full bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
-                #{rank}
-              </span>
-            ) : null}
-            {chips?.map((chip) => (
+            {chips.map((chip) => (
               <span
                 key={chip}
                 className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-xs font-semibold text-[var(--text-muted)]"
@@ -61,28 +87,8 @@ export default function PlaceCard({
               </span>
             ))}
           </div>
-          <h3
-            className={`font-semibold leading-snug text-[var(--text)] ${
-              size === "hero" ? "text-xl" : "text-base"
-            }`}
-          >
-            {place.name}
-          </h3>
-          {subLabel ? (
-            <p className="text-xs text-[var(--text-muted)]">{subLabel}</p>
-          ) : null}
-        </div>
-        {price ? (
-          <span className="rounded-full bg-[var(--text)] px-2 py-1 text-xs font-semibold text-[var(--bg)]">
-            {price}
-          </span>
         ) : null}
       </div>
-      {votesLabel ? (
-        <div className="mt-3 text-xs font-semibold text-[var(--accent)]">
-          {votesLabel}
-        </div>
-      ) : null}
     </button>
   );
 }
