@@ -3,38 +3,30 @@ from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 from app.db.queries import place_vote, fetch_votes_for_place, fetch_vote_count
+from app.models.schemas import VoteIn, VoteOut
 
 router = APIRouter()
 
-@router.post("/votes")
-async def create_vote(
-    place_id: int = Query(..., description="ID of the place to vote for", gt=0),
-    vote: str = Query(default="skip", description="Vote type: worth_it, mid, or skip")
-    ):
+@router.post("/votes", response_model=VoteOut)
+async def create_vote(vote_data: VoteIn):
+    """Create a new vote for a place. FastAPI automatically validates vote values."""
     
-    # Validate vote value
-    allowed_votes = ["worth_it", "mid", "skip"]
-    if vote not in allowed_votes:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid vote value. Must be one of: {', '.join(allowed_votes)}"
-        )
-    
-    # Call query function
-    result = place_vote(place_id, vote)
+    # Call query function with validated data
+    result = place_vote(vote_data.place_id, vote_data.vote.value)
     
     # Check for errors
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(
             status_code=404,
-            detail=f"error while creating vote"
+            detail="Place not found or error while creating vote"
         )
     
-    return {
-        "message": "Vote placed successfully",
-        "place_id": place_id,
-        "vote": vote
-    }
+    return VoteOut(
+        ok=True,
+        place_id=vote_data.place_id,
+        vote=vote_data.vote,
+        created_at=datetime.now(ZoneInfo('UTC')).isoformat()
+    )
 
 
 @router.get("/votes/place/{place_id}")

@@ -4,10 +4,11 @@ from zoneinfo import ZoneInfo
 
 from app.db.queries import fetch_places, fetch_vote_counts_grouped
 from app.services.ranking import parse_time_window, rank_places
+from app.models.schemas import TrendingResponse, TrendingPlaceOut
 
 router = APIRouter()
 
-@router.get("/trending")
+@router.get("/trending", response_model=TrendingResponse)
 async def get_trending(
     city: str = Query(default="Huntsville", description="City to filter places"),
     category: str = Query(default=None, description="Category to filter places"),
@@ -48,10 +49,7 @@ async def get_trending(
     # Rank places using ranking service
     trending_places = rank_places(places, vote_counts, limit)
     
-    return {
-        "places": trending_places,
-        "time_window": time_window,
-        "city": city,
-        "category": category,
-        "count": len(trending_places)
-    }
+    # Convert to TrendingPlaceOut schema
+    trending_places_out = [TrendingPlaceOut(**place) for place in trending_places]
+    
+    return TrendingResponse(places=trending_places_out)

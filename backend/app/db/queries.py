@@ -61,7 +61,7 @@ def place_vote(place_id: int, vote: str = "skip"):
     
     query = (
         supabase.table("votes")
-        .insert({"place_id": int(place_id), "vote": str(vote), "created_at": created_at})
+        .insert({"place_id": int(place_id), "vote": str(vote), "created_at": created_at.isoformat()})
     )
     query.execute()
     return "Placed Vote Successfully!"
