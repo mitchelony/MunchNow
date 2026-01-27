@@ -1,0 +1,112 @@
+import type { Place, PlaceId, VoteValue } from "./types";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+
+type TrendingParams = {
+  city: string;
+  category?: string;
+  time_window: string;
+  limit?: number;
+};
+
+type VotePayload = {
+  place_id: PlaceId;
+  vote: VoteValue;
+  session_id?: string | null;
+};
+
+function buildUrl(path: string, params?: Record<string, string | number | undefined>) {
+  if (!BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
+  }
+  const url = new URL(path, BASE_URL);
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") {
+        url.searchParams.set(key, String(value));
+      }
+    }
+  }
+  return url.toString();
+}
+
+function normalizePlaces(data: unknown): Place[] {
+  if (Array.isArray(data)) {
+    return data as Place[];
+  }
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj.places)) return obj.places as Place[];
+    if (Array.isArray(obj.results)) return obj.results as Place[];
+  }
+  return [];
+}
+
+export async function getTrending(params: TrendingParams): Promise<Place[]> {
+  const url = buildUrl("/trending", {
+    city: params.city,
+    category: params.category,
+    time_window: params.time_window,
+    limit: params.limit,
+  });
+
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) {
+    throw new Error("Failed to load trending places");
+  }
+  const data = await res.json();
+  return normalizePlaces(data);
+}
+
+export async function getPlaces(params: {
+  city: string;
+  category?: string;
+  limit?: number;
+}): Promise<Place[]> {
+  const url = buildUrl("/places", {
+    city: params.city,
+    category: params.category,
+    limit: params.limit,
+  });
+
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) {
+    throw new Error("Failed to load places");
+  }
+  const data = await res.json();
+  return normalizePlaces(data);
+}
+
+export async function submitVote(payload: VotePayload) {
+  const url = buildUrl("/votes");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      place_id: payload.place_id,
+      vote: payload.vote,
+      session_id: payload.session_id ?? undefined,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to submit vote");
+  }
+
+  return res.json().catch(() => null);
+}
+
+export function getOrCreateSessionId() {
+  if (typeof window === "undefined") return null;
+  const key = "munchhsv_session_id";
+  const existing = window.localStorage.getItem(key);
+  if (existing) return existing;
+
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  window.localStorage.setItem(key, id);
+  return id;
+}
