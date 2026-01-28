@@ -339,9 +339,13 @@ export default function HomePage() {
       </div>
 
       {voteTarget ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm md:items-center">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm md:items-center"
+          onClick={() => setVoteTarget(null)}
+        >
           <div
             className="w-full max-w-md rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] md:max-w-lg"
+            onClick={(event) => event.stopPropagation()}
             onTouchStart={handleSheetTouchStart}
             onTouchMove={handleSheetTouchMove}
           >
