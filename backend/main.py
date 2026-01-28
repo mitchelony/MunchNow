@@ -13,7 +13,7 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://192.168.1.162:3000", "https://munchnow.vercel.app/", "https://vercel.com/mitchelonys-projects/munch-now/HSgL68LbWCaZWVehHqYXqQgybHoT"],  # Add your frontend URLs
+    allow_origins=["https://munchnow.vercel.app", "http://localhost:3000"],  # Add your frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
