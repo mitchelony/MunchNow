@@ -180,7 +180,11 @@ export default function HomePage() {
   };
 
   const handleRefresh = () => {
-    setPlaces((prev) => (prev.length > 1 ? shufflePlaces(prev) : prev));
+    setPlaces((prev) =>
+      prev.length > 3
+        ? [...prev.slice(0, 3), ...shufflePlaces(prev.slice(3))]
+        : prev
+    );
   };
 
   const handleSelectCategory = (category: string) => {
