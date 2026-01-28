@@ -96,7 +96,9 @@ export default function HomePage() {
   const [voteTarget, setVoteTarget] = useState<Place | null>(null);
   const [voteSubmitting, setVoteSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [shuffleActive, setShuffleActive] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shuffleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sheetTouchStart = useRef<number | null>(null);
 
   const [initialLoad, setInitialLoad] = useState(true);
@@ -145,6 +147,12 @@ export default function HomePage() {
     };
   }, [toast]);
 
+  useEffect(() => {
+    return () => {
+      if (shuffleTimer.current) clearTimeout(shuffleTimer.current);
+    };
+  }, []);
+
   const handleOpenMaps = (place: Place) => {
     const query = buildMapsQuery(place.name, place.address ?? null);
     const link = getPreferredMapsLink(query);
@@ -180,6 +188,12 @@ export default function HomePage() {
   };
 
   const handleRefresh = () => {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(20);
+    }
+    setShuffleActive(true);
+    if (shuffleTimer.current) clearTimeout(shuffleTimer.current);
+    shuffleTimer.current = setTimeout(() => setShuffleActive(false), 220);
     setPlaces((prev) =>
       prev.length > 3
         ? [...prev.slice(0, 3), ...shufflePlaces(prev.slice(3))]
@@ -210,7 +224,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen">
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-x-hidden">
         <div className="absolute -top-36 left-0 right-0 h-72 bg-[radial-gradient(circle_at_top,_var(--accent-soft),_transparent)]" />
         <div className="absolute -top-12 right-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,_var(--accent-soft),_transparent)]" />
         <div className="relative mx-auto flex max-w-[520px] flex-col gap-6 px-4 pb-14 pt-24 sm:max-w-[760px] sm:px-6 lg:max-w-[1200px] lg:gap-8 lg:px-10 xl:max-w-[1320px]">
@@ -230,7 +244,12 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={handleRefresh}
-                  className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                  className={`rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+                    shuffleActive
+                      ? "scale-[0.98] border-[var(--accent)] text-[var(--accent)] shadow-[var(--shadow-soft)]"
+                      : ""
+                  }`}
+                  aria-pressed={shuffleActive}
                 >
                   Shuffle picks
                 </button>
