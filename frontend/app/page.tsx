@@ -78,13 +78,21 @@ function applyVoteToPlace(place: Place, vote: VoteValue) {
   return next;
 }
 
+function shufflePlaces(items: Place[]) {
+  const copy = items.slice();
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 export default function HomePage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("Quick Bites");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [voteTarget, setVoteTarget] = useState<Place | null>(null);
   const [voteSubmitting, setVoteSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -126,7 +134,7 @@ export default function HomePage() {
     return () => {
       isActive = false;
     };
-  }, [categoryParam, refreshKey]);
+  }, [categoryParam]);
 
   useEffect(() => {
     if (!toast) return;
@@ -172,7 +180,7 @@ export default function HomePage() {
   };
 
   const handleRefresh = () => {
-    setRefreshKey((value) => value + 1);
+    setPlaces((prev) => (prev.length > 1 ? shufflePlaces(prev) : prev));
   };
 
   const handleSelectCategory = (category: string) => {
