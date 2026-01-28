@@ -224,9 +224,11 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen">
-      <div className="relative overflow-x-hidden">
-        <div className="absolute -top-36 left-0 right-0 h-72 bg-[radial-gradient(circle_at_top,_var(--accent-soft),_transparent)]" />
-        <div className="absolute -top-12 right-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,_var(--accent-soft),_transparent)]" />
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-0 overflow-x-clip">
+          <div className="absolute -top-36 left-0 right-0 h-72 bg-[radial-gradient(circle_at_top,_var(--accent-soft),_transparent)]" />
+          <div className="absolute -top-12 right-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,_var(--accent-soft),_transparent)]" />
+        </div>
         <div className="relative mx-auto flex max-w-[520px] flex-col gap-6 px-4 pb-14 pt-24 sm:max-w-[760px] sm:px-6 lg:max-w-[1200px] lg:gap-8 lg:px-10 xl:max-w-[1320px]">
           <div className="sticky top-0 z-30 -mx-4 bg-[var(--bg)]/95 px-4 pb-4 pt-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
             <TopBar />
