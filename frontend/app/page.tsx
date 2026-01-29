@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import posthog from "posthog-js";
 import CategoryChips from "../components/CategoryChips";
 import PlaceCard from "../components/PlaceCard";
 import TopBar from "../components/TopBar";
 import VoteButtons from "../components/VoteButtons";
 import { getOrCreateSessionId, getTrending, submitVote } from "../lib/api";
-import { buildMapsQuery, getPreferredMapsLink } from "../lib/maps";
+import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../lib/maps";
 import type { Place, VoteValue } from "../lib/types";
 
 const CATEGORIES = [
@@ -25,6 +26,13 @@ const CATEGORY_TO_API: Record<string, string> = {
   "Coffee Spots": "coffee_spots",
   "Local Favorite": "local_favorite",
 };
+const CATEGORY_TO_ANALYTICS: Record<string, string> = {
+  "Quick Bites": "quick_bites",
+  Cheap: "cheap",
+  "Late Night": "latenight",
+  "Coffee Spots": "coffee",
+  "Local Favorite": "local_favorite",
+};
 
 function formatCategoryLabel(value?: string | number | null) {
   if (value === null || value === undefined) return FALLBACK_CATEGORY;
@@ -38,6 +46,12 @@ function formatCategoryLabel(value?: string | number | null) {
 function pickCategory(place: Place) {
   const fromArray = place.categories?.[0];
   return formatCategoryLabel(fromArray ?? place.category ?? FALLBACK_CATEGORY);
+}
+
+function toAnalyticsCategory(value?: string | null) {
+  if (!value) return undefined;
+  const label = formatCategoryLabel(value);
+  return CATEGORY_TO_ANALYTICS[label];
 }
 
 function getCategoryChips(place: Place, max: number) {
@@ -112,6 +126,16 @@ export default function HomePage() {
     setSessionId(getOrCreateSessionId());
   }, []);
 
+  const sessionTracked = useRef(false);
+  useEffect(() => {
+    if (!sessionId || sessionTracked.current) return;
+    sessionTracked.current = true;
+    const referrer =
+      typeof document !== "undefined" ? document.referrer : "";
+    const source = referrer ? "referral" : "direct";
+    posthog.capture("session_start", { source });
+  }, [sessionId]);
+
   useEffect(() => {
     let isActive = true;
     setLoading(true);
@@ -156,10 +180,20 @@ export default function HomePage() {
   const handleOpenMaps = (place: Place) => {
     const query = buildMapsQuery(place.name, place.address ?? null);
     const link = getPreferredMapsLink(query);
+    posthog.capture("maps_clicked", {
+      place_id: place.id,
+      provider: isIOS() ? "apple" : "google",
+    });
     window.open(link, "_blank", "noopener,noreferrer");
   };
 
-  const handleSelectPlace = (place: Place) => {
+  const handleSelectPlace = (place: Place, rankPosition?: number) => {
+    posthog.capture("place_opened", {
+      place_id: place.id,
+      place_name: place.name,
+      category: toAnalyticsCategory(place.categories?.[0] ?? place.category),
+      rank_position: rankPosition,
+    });
     setVoteTarget(place);
   };
 
@@ -171,6 +205,10 @@ export default function HomePage() {
         place_id: voteTarget.id,
         vote,
         session_id: sessionId,
+      });
+      posthog.capture("vote_submitted", {
+        place_id: voteTarget.id,
+        vote_type: vote,
       });
       setPlaces((prev) =>
         prev.map((place) =>
@@ -199,11 +237,15 @@ export default function HomePage() {
         ? [...prev.slice(0, 3), ...shufflePlaces(prev.slice(3))]
         : prev
     );
+    posthog.capture("shuffle_clicked", { section: "quick_picks" });
   };
 
   const handleSelectCategory = (category: string) => {
     setInitialLoad(false);
     setSelectedCategory(category);
+    posthog.capture("category_selected", {
+      category: CATEGORY_TO_ANALYTICS[category],
+    });
   };
 
   const handleSheetTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
@@ -306,7 +348,9 @@ export default function HomePage() {
                         statusLabel={status}
                         votesLabel={`${votes.total} votes`}
                         size={index === 0 ? "hero" : "stacked"}
-                        onSelect={handleSelectPlace}
+                        onSelect={(value) =>
+                          handleSelectPlace(value, index + 1)
+                        }
                       />
                     );
                   })}
@@ -332,7 +376,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-                  {quickPicks.map((place) => {
+                  {quickPicks.map((place, index) => {
                     const votes = computeVoteCounts(place);
                     const chips = getCategoryChips(place, 1);
                     const status = buildStatus(place);
@@ -344,7 +388,9 @@ export default function HomePage() {
                         statusLabel={status}
                         votesLabel={`${votes.total} votes`}
                         size="compact"
-                        onSelect={handleSelectPlace}
+                        onSelect={(value) =>
+                          handleSelectPlace(value, index + 4)
+                        }
                       />
                     );
                   })}
