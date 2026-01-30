@@ -137,6 +137,19 @@ export default function HomePage() {
   }, [sessionId]);
 
   useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        posthog.capture("page_leave", { page: "home" });
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
     let isActive = true;
     setLoading(true);
     setError(null);
