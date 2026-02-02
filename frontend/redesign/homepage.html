@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MunchHSV Discover Home</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#E07A5F", // Terracotta
+                        "primary-dark": "#C85F45",
+                        "secondary": "#8AA696", // Sage
+                        "background-light": "#F9F9F9",
+                        "background-dark": "#1C1C1E",
+                        "card-light": "#FFFFFF",
+                        "card-dark": "#2C2C2E",
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'nav': '0 -4px 20px rgba(0,0,0,0.03)'
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            min-height: max(100vh, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-sans bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 antialiased selection:bg-primary selection:text-white">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden pb-28">
+<header class="sticky top-0 z-20 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 transition-all">
+<div class="flex items-center p-4 justify-between max-w-lg mx-auto w-full">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary font-bold">location_on</span>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold tracking-tight">
+                        MunchHSV
+                    </h2>
+</div>
+<div class="flex items-center justify-end gap-2">
+<button class="flex items-center justify-center rounded-full h-10 w-10 bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="flex items-center justify-center rounded-full h-10 w-10 bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col max-w-lg mx-auto w-full">
+<div class="px-5 pt-6 pb-4">
+<h1 class="text-slate-900 dark:text-white tracking-tight text-[34px] font-extrabold leading-[1.1]">
+                    Hungry in<br/>Huntsville?
+                </h1>
+<p class="text-slate-500 dark:text-slate-400 text-[15px] mt-2 font-medium">Curated picks for the indecisive eater.</p>
+</div>
+<div class="px-5 pb-6 sticky top-[72px] z-10">
+<button class="w-full cursor-pointer group relative flex items-center justify-center overflow-hidden rounded-2xl h-14 bg-primary text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:bg-primary-dark active:scale-[0.98] transition-all duration-200">
+<span class="material-symbols-outlined mr-2 text-2xl group-hover:rotate-180 transition-transform duration-500">shuffle</span>
+<span class="text-lg font-bold tracking-wide">Shuffle &amp; Eat</span>
+</button>
+</div>
+<div class="flex flex-col gap-4 px-5">
+<article class="group bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all duration-300 flex flex-col gap-5">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center rounded-md bg-green-100 dark:bg-green-900/30 px-2.5 py-1 text-xs font-bold text-green-700 dark:text-green-300 tracking-wide uppercase">
+                Best Wings
+            </span>
+<span class="text-xs text-slate-400 font-medium">$$ • 1.2mi</span>
+</div>
+<div>
+<h3 class="text-slate-900 dark:text-white text-xl font-bold leading-tight group-hover:text-primary transition-colors">Big Shake's Hot Chicken</h3>
+</div>
+<div class="relative pl-3 border-l-2 border-primary/40 py-0.5">
+<p class="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed">
+                "The heat levels are real, but the waffle fries steal the show every time."
+            </p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all active:scale-95 gap-1 group/btn">
+<span class="material-symbols-outlined text-[20px]">thumb_up</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Worth it!</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-transparent hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">sentiment_neutral</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Mid</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">thumb_down</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Skip</span>
+</button>
+</div>
+</article>
+<article class="group bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all duration-300 flex flex-col gap-5">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center rounded-md bg-blue-100 dark:bg-blue-900/30 px-2.5 py-1 text-xs font-bold text-blue-700 dark:text-blue-300 tracking-wide uppercase">
+                Chill Vibes
+            </span>
+<span class="text-xs text-slate-400 font-medium">$$ • 2.5mi</span>
+</div>
+<div>
+<h3 class="text-slate-900 dark:text-white text-xl font-bold leading-tight group-hover:text-primary transition-colors">The Nook</h3>
+</div>
+<div class="relative pl-3 border-l-2 border-primary/40 py-0.5">
+<p class="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed">
+                "Patio seating perfect for study breaks. Great craft selection on tap."
+            </p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all active:scale-95 gap-1 group/btn">
+<span class="material-symbols-outlined text-[20px]">thumb_up</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Worth it!</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-transparent hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">sentiment_neutral</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Mid</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">thumb_down</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Skip</span>
+</button>
+</div>
+</article>
+<article class="group bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all duration-300 flex flex-col gap-5">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center rounded-md bg-orange-100 dark:bg-orange-900/30 px-2.5 py-1 text-xs font-bold text-orange-700 dark:text-orange-300 tracking-wide uppercase">
+                Late Night
+            </span>
+<span class="text-xs text-slate-400 font-medium">$ • 0.8mi</span>
+</div>
+<div>
+<h3 class="text-slate-900 dark:text-white text-xl font-bold leading-tight group-hover:text-primary transition-colors">Campus 805</h3>
+</div>
+<div class="relative pl-3 border-l-2 border-primary/40 py-0.5">
+<p class="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed">
+                "Converted middle school with hidden speakeasies and late-night tacos."
+            </p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all active:scale-95 gap-1 group/btn">
+<span class="material-symbols-outlined text-[20px]">thumb_up</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Worth it!</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-transparent hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">sentiment_neutral</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Mid</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">thumb_down</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Skip</span>
+</button>
+</div>
+</article>
+<article class="group bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all duration-300 flex flex-col gap-5">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center rounded-md bg-purple-100 dark:bg-purple-900/30 px-2.5 py-1 text-xs font-bold text-purple-700 dark:text-purple-300 tracking-wide uppercase">
+                Sweet Tooth
+            </span>
+<span class="text-xs text-slate-400 font-medium">$ • 3.0mi</span>
+</div>
+<div>
+<h3 class="text-slate-900 dark:text-white text-xl font-bold leading-tight group-hover:text-primary transition-colors">Piper &amp; Leaf</h3>
+</div>
+<div class="relative pl-3 border-l-2 border-primary/40 py-0.5">
+<p class="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed">
+                "Artisan tea blends that are basically a warm hug in a jar."
+            </p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all active:scale-95 gap-1 group/btn">
+<span class="material-symbols-outlined text-[20px]">thumb_up</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Worth it!</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-transparent hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">sentiment_neutral</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Mid</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 gap-1">
+<span class="material-symbols-outlined text-[20px]">thumb_down</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Skip</span>
+</button>
+</div>
+</article>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 z-50 w-full bg-card-light dark:bg-card-dark border-t border-slate-100 dark:border-slate-800 shadow-nav">
+<div class="max-w-lg mx-auto flex h-[84px] items-start pt-3 justify-around px-4 pb-8">
+<button class="flex flex-1 flex-col items-center gap-1.5 group">
+<div class="p-1 rounded-full bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary text-[26px] filled">explore</span>
+</div>
+<span class="text-[11px] font-bold text-primary">Discover</span>
+</button>
+<button class="flex flex-1 flex-col items-center gap-1.5 group text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+<div class="p-1 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[26px]">bookmark</span>
+</div>
+<span class="text-[11px] font-medium">Saved</span>
+</button>
+<button class="flex flex-1 flex-col items-center gap-1.5 group text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+<div class="p-1 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[26px]">info</span>
+</div>
+<span class="text-[11px] font-medium">Info</span>
+</button>
+</div>
+</nav>
+</div>
+</body></html>

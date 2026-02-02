@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Place Details View</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19e680",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#112119",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2c24",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased">
+<div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden pb-32">
+<div class="sticky top-0 z-40 flex items-center justify-between px-5 pt-12 pb-4 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-transparent transition-colors duration-200">
+<button class="flex items-center justify-center size-10 rounded-full bg-white dark:bg-surface-dark shadow-sm border border-gray-200 dark:border-gray-700 text-background-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<button class="flex items-center justify-center size-10 rounded-full bg-white dark:bg-surface-dark shadow-sm border border-gray-200 dark:border-gray-700 text-background-dark dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined">ios_share</span>
+</button>
+</div>
+<div class="flex flex-col px-6 mt-2 relative z-10">
+<div class="mb-5">
+<div class="flex items-center gap-2 mb-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/20 text-green-800 dark:text-primary tracking-wide uppercase">
+                    Open Now
+                </span>
+<span class="text-gray-400 dark:text-gray-500 text-sm font-semibold">Pizza • Dive Bar</span>
+</div>
+<h1 class="text-[#111814] dark:text-white tracking-tighter text-5xl font-black leading-[0.9] mb-3">
+                Big Ed's<br/>Pizza
+            </h1>
+<p class="text-gray-500 dark:text-gray-400 text-lg font-medium leading-snug">
+                Classic Dive &amp; Slices in Downtown Huntsville
+            </p>
+</div>
+<div class="flex gap-3 flex-wrap mb-8 pb-8 border-b border-gray-200 dark:border-gray-800/50">
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 px-3">
+<span class="material-symbols-outlined text-[18px] text-primary">near_me</span>
+<p class="text-[#111814] dark:text-white text-sm font-bold">1.2 mi</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 px-3">
+<span class="material-symbols-outlined text-[18px] text-primary">schedule</span>
+<p class="text-[#111814] dark:text-white text-sm font-bold">Until 2 AM</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 px-3">
+<span class="material-symbols-outlined text-[18px] text-primary">attach_money</span>
+<p class="text-[#111814] dark:text-white text-sm font-bold">$$</p>
+</div>
+</div>
+<div class="mb-10">
+<div class="flex items-end justify-between mb-4 px-1">
+<div>
+<h2 class="text-xl font-bold text-[#111814] dark:text-white tracking-tight">Verdict</h2>
+<p class="text-sm text-gray-500 dark:text-gray-400 font-medium">842 student votes</p>
+</div>
+<div class="flex -space-x-2">
+<div class="size-8 rounded-full ring-2 ring-background-light dark:ring-background-dark bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">JD</div>
+<div class="size-8 rounded-full ring-2 ring-background-light dark:ring-background-dark bg-pink-100 flex items-center justify-center text-pink-700 text-xs font-bold">MK</div>
+<div class="size-8 rounded-full ring-2 ring-background-light dark:ring-background-dark bg-surface-dark border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-white text-xs font-bold">+</div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-3">
+<button class="group flex flex-col items-center justify-between p-3 h-32 rounded-2xl bg-white dark:bg-surface-dark border-2 border-primary/20 hover:border-primary active:scale-[0.98] transition-all shadow-sm relative overflow-hidden">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="relative text-xs font-bold text-primary self-end">72%</span>
+<div class="relative mb-1 size-10 rounded-full bg-primary/10 text-primary-800 dark:text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined filled-icon text-[22px]">thumb_up</span>
+</div>
+<span class="relative text-sm font-bold text-[#111814] dark:text-white">Worth it!</span>
+</button>
+<button class="group flex flex-col items-center justify-between p-3 h-32 rounded-2xl bg-white dark:bg-surface-dark border-2 border-gray-100 dark:border-gray-800 hover:border-yellow-400 active:scale-[0.98] transition-all shadow-sm relative overflow-hidden">
+<div class="absolute inset-0 bg-yellow-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="relative text-xs font-bold text-gray-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors self-end">21%</span>
+<div class="relative mb-1 size-10 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[22px]">sentiment_neutral</span>
+</div>
+<span class="relative text-sm font-bold text-[#111814] dark:text-white">Mid</span>
+</button>
+<button class="group flex flex-col items-center justify-between p-3 h-32 rounded-2xl bg-white dark:bg-surface-dark border-2 border-gray-100 dark:border-gray-800 hover:border-red-400 active:scale-[0.98] transition-all shadow-sm relative overflow-hidden">
+<div class="absolute inset-0 bg-red-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="relative text-xs font-bold text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors self-end">7%</span>
+<div class="relative mb-1 size-10 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[22px]">thumb_down</span>
+</div>
+<span class="relative text-sm font-bold text-[#111814] dark:text-white">Skip</span>
+</button>
+</div>
+</div>
+<div class="mb-8">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-1 h-5 bg-primary rounded-full"></div>
+<h3 class="text-[#111814] dark:text-white text-xl font-bold tracking-tight">The Vibe</h3>
+</div>
+<div class="p-0">
+<p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed font-medium">
+                    "Loud, energetic, and perfect for groups. Expect grease, graffiti on the walls, and the best playlist in town."
+                </p>
+</div>
+</div>
+<div class="mb-8">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-1 h-5 bg-primary rounded-full"></div>
+<h3 class="text-[#111814] dark:text-white text-xl font-bold tracking-tight">Must Try</h3>
+</div>
+<div class="rounded-xl bg-gray-100/50 dark:bg-surface-dark border border-gray-200 dark:border-gray-800 p-5">
+<div class="flex items-start justify-between gap-4">
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-1">
+<h4 class="text-[#112119] dark:text-white font-bold text-lg">Hot Honey Pepperoni</h4>
+<span class="material-symbols-outlined text-orange-500 text-sm filled-icon" title="Spicy">local_fire_department</span>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-base leading-relaxed">
+                            Crispy cups, spicy honey drizzle, fresh basil. A local legend.
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-8">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-1 h-5 bg-primary rounded-full"></div>
+<h3 class="text-[#111814] dark:text-white text-xl font-bold tracking-tight">Location</h3>
+</div>
+<div class="flex items-start gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-surface-dark shadow-sm">
+<div class="shrink-0 size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined filled-icon">location_on</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[#111814] dark:text-white font-bold text-base">255 Pratt Ave NE</span>
+<span class="text-gray-500 dark:text-gray-400 text-sm mb-2">Huntsville, AL 35801</span>
+<button class="text-primary text-sm font-bold flex items-center gap-1 hover:opacity-80 transition-opacity self-start">
+                        Open in Maps <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="fixed bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-background-dark/90 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 z-50">
+<div class="flex gap-3 w-full max-w-md mx-auto">
+<button class="flex-1 h-14 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-transparent flex items-center justify-center gap-2 transition-transform active:scale-95 group hover:bg-gray-50 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined text-[#111814] dark:text-white group-hover:scale-110 transition-transform">bookmark_border</span>
+<span class="text-[#111814] dark:text-white font-bold text-base">Save</span>
+</button>
+<button class="flex-[2] h-14 rounded-xl bg-primary text-[#112119] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-transform active:scale-95 hover:bg-primary/90">
+<span class="material-symbols-outlined filled-icon">directions</span>
+<span class="font-bold text-base">Get Directions</span>
+</button>
+</div>
+<div class="h-2 w-full"></div>
+</div>
+</div>
+</body></html>
