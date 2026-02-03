@@ -172,12 +172,16 @@ export default function HomePage() {
   const [shuffleActive, setShuffleActive] = useState(false);
   const [voteCooldowns, setVoteCooldowns] = useState<Record<string, number>>({});
   const [now, setNow] = useState(() => Date.now());
+  const [voteFeedback, setVoteFeedback] = useState<
+    Record<string, { vote: VoteValue; at: number }>
+  >({});
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shuffleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sheetTouchStart = useRef<number | null>(null);
 
   const COOLDOWN_MS = 24 * 60 * 60 * 1000;
   const COOLDOWN_KEY = "munch_vote_cooldowns";
+  const FEEDBACK_WINDOW_MS = 1200;
 
   const formatRemaining = (ms: number) => {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -235,6 +239,22 @@ export default function HomePage() {
     }, 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!Object.keys(voteFeedback).length) return;
+    setVoteFeedback((prev) => {
+      let changed = false;
+      const next: Record<string, { vote: VoteValue; at: number }> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        if (now - value.at < FEEDBACK_WINDOW_MS) {
+          next[key] = value;
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [now, voteFeedback, FEEDBACK_WINDOW_MS]);
 
   const sessionTracked = useRef(false);
   useEffect(() => {
@@ -351,6 +371,10 @@ export default function HomePage() {
       if (voteTarget?.id === place.id) {
         setVoteTarget((prev) => (prev ? applyVoteToPlace(prev, vote) : prev));
       }
+      setVoteFeedback((prev) => ({
+        ...prev,
+        [String(place.id)]: { vote, at: Date.now() },
+      }));
       setVoteCooldowns((prev) => ({
         ...prev,
         [String(place.id)]: Date.now() + COOLDOWN_MS,
@@ -484,6 +508,10 @@ export default function HomePage() {
                 const remaining = getCooldownRemaining(place.id);
                 const cooldownLabel =
                   remaining > 0 ? formatRemaining(remaining) : null;
+                const feedback = voteFeedback[String(place.id)];
+                const activeVote = feedback?.vote ?? null;
+                const animateVote =
+                  !!feedback && now - feedback.at < FEEDBACK_WINDOW_MS;
                 const span =
                   index === 0 ? "md:col-span-2 xl:col-span-2" : "";
                 return (
@@ -495,6 +523,8 @@ export default function HomePage() {
                       statusLabel={status}
                       voteCounts={votes}
                       cooldownLabel={cooldownLabel}
+                      activeVote={activeVote}
+                      animateVote={animateVote}
                       size={index === 0 ? "hero" : "stacked"}
                       onSelect={(value) => handleSelectPlace(value, index + 1)}
                       onVote={handleVoteForPlace}
@@ -538,6 +568,10 @@ export default function HomePage() {
                       const remaining = getCooldownRemaining(place.id);
                       const cooldownLabel =
                         remaining > 0 ? formatRemaining(remaining) : null;
+                      const feedback = voteFeedback[String(place.id)];
+                      const activeVote = feedback?.vote ?? null;
+                      const animateVote =
+                        !!feedback && now - feedback.at < FEEDBACK_WINDOW_MS;
                       return (
                         <div key={String(place.id)}>
                           <PlaceCard
@@ -547,6 +581,8 @@ export default function HomePage() {
                             statusLabel={status}
                             voteCounts={votes}
                             cooldownLabel={cooldownLabel}
+                            activeVote={activeVote}
+                            animateVote={animateVote}
                             size="stacked"
                             onSelect={(value) =>
                               handleSelectPlace(value, index + 4)
@@ -737,6 +773,17 @@ export default function HomePage() {
                       <VoteButtons
                         onVote={handleVote}
                         isSubmitting={voteSubmitting}
+                        activeVote={
+                          voteTarget
+                            ? voteFeedback[String(voteTarget.id)]?.vote ?? null
+                            : null
+                        }
+                        animateVote={
+                          voteTarget
+                            ? now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
+                              FEEDBACK_WINDOW_MS
+                            : false
+                        }
                       />
                     )}
                   </div>

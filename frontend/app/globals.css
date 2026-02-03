@@ -121,6 +121,10 @@
   .animate-float-slow {
     animation: float-slow 6s ease-in-out infinite;
   }
+
+  .animate-pop {
+    animation: pop 320ms ease-out;
+  }
 }
 
 .material-symbols-outlined {
@@ -161,6 +165,18 @@
   }
   50% {
     transform: translateY(-12px);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.95);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
