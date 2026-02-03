@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type TouchEvent,
+} from "react";
 import posthog from "posthog-js";
 import CategoryChips from "../components/CategoryChips";
 import PlaceCard from "../components/PlaceCard";
@@ -33,6 +40,35 @@ const CATEGORY_TO_ANALYTICS: Record<string, string> = {
   "Coffee Spots": "coffee",
   "Local Favorite": "local_favorite",
 };
+
+const CATEGORY_THEME: Record<string, { primary: string; dark: string; soft: string }> =
+  {
+    "Quick Bites": {
+      primary: "#f97316",
+      dark: "#ea580c",
+      soft: "rgba(249, 115, 22, 0.16)",
+    },
+    Cheap: {
+      primary: "#16a34a",
+      dark: "#15803d",
+      soft: "rgba(22, 163, 74, 0.16)",
+    },
+    "Late Night": {
+      primary: "#7c3aed",
+      dark: "#6d28d9",
+      soft: "rgba(124, 58, 237, 0.16)",
+    },
+    "Coffee Spots": {
+      primary: "#eab308",
+      dark: "#ca8a04",
+      soft: "rgba(234, 179, 8, 0.18)",
+    },
+    "Local Favorite": {
+      primary: "#3b82f6",
+      dark: "#2563eb",
+      soft: "rgba(59, 130, 246, 0.16)",
+    },
+  };
 
 function formatCategoryLabel(value?: string | number | null) {
   if (value === null || value === undefined) return FALLBACK_CATEGORY;
@@ -310,8 +346,19 @@ export default function HomePage() {
 
   const displayPlaces = places.slice(0, 10);
 
+  const theme =
+    CATEGORY_THEME[selectedCategory] ?? CATEGORY_THEME["Local Favorite"];
+  const themeStyle: CSSProperties = {
+    ["--primary" as string]: theme.primary,
+    ["--primary-dark" as string]: theme.dark,
+    ["--primary-soft" as string]: theme.soft,
+  };
+
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-28">
+    <div
+      className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-28"
+      style={themeStyle}
+    >
       <header className="fixed top-0 left-0 z-50 w-full border-b border-slate-200/50 bg-[var(--surface)]/95 backdrop-blur-md transition-all">
         <div className="mx-auto flex w-full max-w-none flex-col gap-3 px-4 py-4 sm:px-6 lg:px-10 2xl:px-16">
           <TopBar />
