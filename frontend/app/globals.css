@@ -2,36 +2,76 @@
 
 :root {
   color-scheme: light;
-  --bg: #f7f4ee;
+  --bg: #f6f8f7;
   --surface: #ffffff;
-  --surface-2: #f0eee7;
-  --border: rgba(15, 23, 42, 0.16);
-  --text: #10141a;
-  --text-muted: #4b5563;
-  --accent: #00a7b5;
-  --accent-strong: #00c2d4;
-  --accent-soft: rgba(0, 167, 181, 0.16);
-  --gold: #f4b400;
-  --green: #7ac70c;
-  --shadow: 0 18px 40px -30px rgba(15, 23, 42, 0.5);
-  --shadow-soft: 0 10px 30px -26px rgba(15, 23, 42, 0.45);
+  --surface-2: #eef2f0;
+  --border: rgba(15, 23, 42, 0.12);
+  --text: #111814;
+  --text-muted: #6b7280;
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --primary-soft: rgba(79, 70, 229, 0.16);
+  --secondary: #1e293b;
+  --success: #19e680;
+  --success-soft: rgba(25, 230, 128, 0.18);
+  --warning: #f97316;
+  --warning-soft: rgba(249, 115, 22, 0.18);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.18);
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-nav: 0 -4px 20px rgba(0, 0, 0, 0.03);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0f141a;
-  --surface: #151b24;
-  --surface-2: #1e2633;
-  --border: rgba(148, 163, 184, 0.22);
-  --text: #f8fafc;
-  --text-muted: #a7b0bf;
-  --accent: #14c7d6;
-  --accent-strong: #3dd4e0;
-  --accent-soft: rgba(20, 199, 214, 0.2);
-  --gold: #f7c53b;
-  --green: #93d93a;
-  --shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.75);
+  --bg: #111214;
+  --surface: #1b1d20;
+  --surface-2: #23262a;
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #f5f7fa;
+  --text-muted: #9aa3ad;
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-soft: rgba(99, 102, 241, 0.2);
+  --secondary: #94a3b8;
+  --success: #19e680;
+  --success-soft: rgba(25, 230, 128, 0.2);
+  --warning: #fb923c;
+  --warning-soft: rgba(251, 146, 60, 0.22);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.22);
   --shadow-soft: 0 10px 30px -26px rgba(0, 0, 0, 0.65);
+  --shadow-nav: 0 -6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.theme-place {
+  --bg: #f6f8f7;
+  --surface: #ffffff;
+  --surface-2: #eef2f0;
+  --border: rgba(17, 24, 20, 0.12);
+  --text: #111814;
+  --text-muted: #6b7280;
+  --primary: #19e680;
+  --primary-dark: #10c770;
+  --primary-soft: rgba(25, 230, 128, 0.18);
+  --secondary: #0f7a4a;
+  --shadow-soft: 0 12px 30px -26px rgba(17, 24, 20, 0.25);
+  --shadow-nav: 0 -8px 28px rgba(17, 24, 20, 0.12);
+}
+
+[data-theme="dark"] .theme-place {
+  --bg: #111214;
+  --surface: #1b1d20;
+  --surface-2: #23262a;
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #f5f7fa;
+  --text-muted: #9aa3ad;
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-soft: rgba(99, 102, 241, 0.2);
+  --secondary: #94a3b8;
+  --shadow-soft: 0 18px 40px -32px rgba(0, 0, 0, 0.65);
+  --shadow-nav: 0 -10px 32px rgba(0, 0, 0, 0.4);
 }
 
 @layer base {
@@ -42,19 +82,53 @@
   body {
     background-color: var(--bg);
     color: var(--text);
-    font-family: "Helvetica Neue", Arial, system-ui, sans-serif;
+    font-family: var(--font-inter), "Inter", system-ui, sans-serif;
     transition: background-color 160ms ease, color 160ms ease;
   }
 
   ::selection {
-    background: rgba(239, 90, 60, 0.25);
+    background: var(--primary-soft);
   }
 }
 
 @layer utilities {
+  .font-display {
+    font-family: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .animate-pulse-slow {
     animation: pulse-slow 1.8s ease-in-out infinite;
   }
+
+  .animate-fade-up {
+    animation: fade-up 520ms ease both;
+  }
+
+  .animate-fade-up-delay {
+    animation: fade-up 640ms ease both;
+    animation-delay: 120ms;
+  }
+
+  .animate-float-slow {
+    animation: float-slow 6s ease-in-out infinite;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
 }
 
 @keyframes pulse-slow {
@@ -66,6 +140,27 @@
   50% {
     transform: scale(1.2);
     opacity: 1;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
   }
 }
 

@@ -11,6 +11,7 @@ export type Place = {
   address?: string | null;
   score_hint?: string | null;
   city?: string | null;
+  score?: number | null;
   worth_it_count?: number | null;
   mid_count?: number | null;
   skip_count?: number | null;

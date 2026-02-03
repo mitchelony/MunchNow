@@ -1,4 +1,5 @@
-import type { Place } from "../lib/types";
+import type { MouseEvent } from "react";
+import type { Place, VoteValue } from "../lib/types";
 
 function formatPriceTier(price?: number | string | null) {
   if (!price) return null;
@@ -16,79 +17,199 @@ type PlaceCardProps = {
   place: Place;
   chips?: string[];
   statusLabel?: string;
-  votesLabel?: string;
+  voteCounts?: {
+    worth: number;
+    mid: number;
+    skip: number;
+    total: number;
+  };
   rank?: number;
   size?: "hero" | "stacked" | "compact";
   onSelect: (place: Place) => void;
+  onVote?: (place: Place, vote: VoteValue) => void;
 };
 
 export default function PlaceCard({
   place,
   chips,
   statusLabel,
-  votesLabel,
+  voteCounts,
   rank,
   size = "compact",
   onSelect,
+  onVote,
 }: PlaceCardProps) {
   const price = formatPriceTier(place.price_tier);
+  const label = chips?.[0] ?? statusLabel ?? "Local Favorite";
+  const meta = [price, place.city].filter(Boolean).join(" • ");
+  const summary = place.address ?? "Tap to see why locals love it.";
+  const chipClass = (value: string) =>
+    ({
+      "Quick Bites": "bg-orange-100 text-orange-700",
+      Cheap: "bg-emerald-100 text-emerald-700",
+      "Late Night": "bg-purple-100 text-purple-700",
+      "Coffee Spots": "bg-yellow-100 text-yellow-700",
+      "Local Favorite": "bg-blue-100 text-blue-700",
+    }[value] ?? "bg-[var(--primary-soft)] text-[var(--primary)]");
+  const chipsList = chips && chips.length > 0 ? chips : [label];
+  const derivedScore =
+    typeof place.score === "number"
+      ? place.score
+      : voteCounts
+      ? voteCounts.worth - voteCounts.skip + 0.5 * voteCounts.mid
+      : null;
+  const scoreLabel =
+    typeof derivedScore === "number" ? derivedScore.toFixed(1) : null;
 
-  const base =
-    "w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-left shadow-[var(--shadow)] transition hover:-translate-y-0.5 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
-  const layout =
-    size === "hero"
-      ? "p-6"
-      : size === "stacked"
-      ? "p-4"
-      : "p-3.5";
+  const layout = size === "hero" ? "p-5" : size === "stacked" ? "p-4" : "p-4";
+
+  const handleVote = (event: MouseEvent, vote: VoteValue) => {
+    event.stopPropagation();
+    if (onVote) {
+      onVote(place, vote);
+    } else {
+      onSelect(place);
+    }
+  };
 
   return (
-    <button
-      type="button"
+    <article
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(place)}
-      className={`${base} ${layout}`}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(place);
+        }
+      }}
+      className={`group flex flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-soft)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${layout}`}
     >
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          {rank ? (
-            <span className="rounded-full bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-white">
-              #{rank}
-            </span>
-          ) : null}
-          <h3
-            className={`font-semibold leading-snug text-[var(--text)] ${
-              size === "hero" ? "text-xl" : "text-base"
-            }`}
-          >
-            {place.name}
-          </h3>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-          {statusLabel ? <span>{statusLabel}</span> : null}
-          {price ? (
-            <span className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 font-semibold text-[var(--text)]">
-              {price}
-            </span>
-          ) : null}
-        </div>
-        {votesLabel ? (
-          <div className="text-xs font-semibold text-[var(--accent)]">
-            {votesLabel}
-          </div>
-        ) : null}
-        {chips && chips.length > 0 ? (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            {chips.map((chip) => (
+            {chipsList.map((chip) => (
               <span
                 key={chip}
-                className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-xs font-semibold text-[var(--text-muted)]"
+                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${chipClass(
+                  chip
+                )}`}
               >
                 {chip}
               </span>
             ))}
           </div>
+          <div className="flex items-center gap-2">
+            {meta ? (
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                {meta}
+              </span>
+            ) : null}
+            {scoreLabel ? (
+              <div className="flex flex-col items-center">
+                <div
+                  className={`flex items-center rounded-full border border-[var(--primary)]/30 bg-[var(--primary-soft)] ${
+                    size === "hero"
+                      ? "px-2.5 py-0.5 text-[11px]"
+                      : "px-2 py-0.5 text-[10px]"
+                  } font-semibold uppercase tracking-wider text-[var(--primary)]`}
+                >
+                  <span
+                    className={`material-symbols-outlined ${
+                      size === "hero" ? "text-[16px]" : "text-[14px]"
+                    }`}
+                  >
+                    trending_up
+                  </span>
+                  <span className="ml-1">{scoreLabel}</span>
+                </div>
+                <span
+                  className={`mt-0.5 ${
+                    size === "hero" ? "text-[10px]" : "text-[9px]"
+                  } font-semibold uppercase tracking-wider text-[var(--primary)]/80`}
+                >
+                  Score
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {rank ? (
+            <span className="rounded-full bg-[var(--primary)] px-2 py-1 text-xs font-semibold text-white">
+              #{rank}
+            </span>
+          ) : null}
+          <h3 className="text-xl font-bold leading-tight text-[var(--text)] transition-colors group-hover:text-[var(--primary)]">
+            {place.name}
+          </h3>
+        </div>
+        <div className="relative border-l-2 border-[var(--primary)]/40 py-0.5 pl-3">
+          <p className="text-sm font-medium leading-relaxed text-[var(--text-muted)]">
+            {summary}
+          </p>
+        </div>
+        {voteCounts ? (
+          <div className="flex items-center gap-3 text-xs font-semibold text-[var(--text-muted)]">
+            <span className="inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] text-[var(--success)]">
+                thumb_up
+              </span>
+              {voteCounts.worth}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] text-[var(--warning)]">
+                sentiment_neutral
+              </span>
+              {voteCounts.mid}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] text-[var(--danger)]">
+                thumb_down
+              </span>
+              {voteCounts.skip}
+            </span>
+          </div>
         ) : null}
       </div>
-    </button>
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={(event) => handleVote(event, "worth_it")}
+          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--success)]/30 hover:bg-[var(--success)] hover:text-white"
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            thumb_up
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Worth it!
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={(event) => handleVote(event, "mid")}
+          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--warning)]/30 hover:bg-[var(--warning)] hover:text-white"
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            sentiment_neutral
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Mid
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={(event) => handleVote(event, "skip")}
+          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--danger)]/30 hover:bg-[var(--danger)] hover:text-white"
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            thumb_down
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Skip
+          </span>
+        </button>
+      </div>
+    </article>
   );
 }
