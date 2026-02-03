@@ -180,7 +180,7 @@ export default function PlaceCard({
           </div>
         ) : null}
       </div>
-      {cooldownLabel ? (
+      {cooldownLabel && !(animateVote && activeVote) ? (
         <button
           type="button"
           onClick={(event) => {
@@ -201,6 +201,7 @@ export default function PlaceCard({
                 ? "border-[var(--success)]/40 bg-[var(--success)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--success)]/30 hover:bg-[var(--success)] hover:text-white"
             } ${animateVote && activeVote === "worth_it" ? "animate-pop" : ""}`}
+            disabled={!!cooldownLabel}
           >
             <span className="material-symbols-outlined text-[20px]">
               thumb_up
@@ -224,6 +225,7 @@ export default function PlaceCard({
                 ? "border-[var(--warning)]/40 bg-[var(--warning)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--warning)]/30 hover:bg-[var(--warning)] hover:text-white"
             } ${animateVote && activeVote === "mid" ? "animate-pop" : ""}`}
+            disabled={!!cooldownLabel}
           >
             <span className="material-symbols-outlined text-[20px]">
               sentiment_neutral
@@ -247,6 +249,7 @@ export default function PlaceCard({
                 ? "border-[var(--danger)]/40 bg-[var(--danger)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--danger)]/30 hover:bg-[var(--danger)] hover:text-white"
             } ${animateVote && activeVote === "skip" ? "animate-pop" : ""}`}
+            disabled={!!cooldownLabel}
           >
             <span className="material-symbols-outlined text-[20px]">
               thumb_down
