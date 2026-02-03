@@ -37,7 +37,7 @@ export default function CategoryChips({
             key={category}
             type="button"
             onClick={() => onSelect(category)}
-            className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
+            className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
               isActive
                 ? `${activeClass} shadow-[var(--shadow-soft)]`
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:-translate-y-0.5"

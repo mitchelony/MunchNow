@@ -212,6 +212,8 @@ export default function HomePage() {
     };
   }, []);
 
+  // Sticky shuffle now handled by CSS on the button container.
+
   const handleOpenMaps = (place: Place) => {
     const query = buildMapsQuery(place.name, place.address ?? null);
     const link = getPreferredMapsLink(query);
@@ -310,14 +312,14 @@ export default function HomePage() {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-28">
-      <header className="sticky top-0 z-20 border-b border-slate-200/50 bg-[var(--bg)]/95 backdrop-blur-md transition-all">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
+      <header className="fixed top-0 left-0 z-50 w-full border-b border-slate-200/50 bg-[var(--surface)]/95 backdrop-blur-md transition-all">
+        <div className="mx-auto flex w-full max-w-none flex-col gap-3 px-4 py-4 sm:px-6 lg:px-10 2xl:px-16">
           <TopBar />
         </div>
       </header>
 
-      <main className="flex w-full flex-1 flex-col">
-        <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-4 sm:px-6 lg:px-10">
+      <main className="flex w-full flex-1 flex-col pt-[96px]">
+        <div className="mx-auto w-full max-w-none px-4 pt-8 pb-4 sm:px-6 lg:px-10 2xl:px-16">
           <h1 className="font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-[var(--text)]">
             Hungry in
             <br />
@@ -329,22 +331,7 @@ export default function HomePage() {
         </div>
 
         <div className="sticky top-[72px] z-10 w-full">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-4 sm:px-6 lg:px-10">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              className={`group relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--primary)] text-white shadow-[var(--shadow-soft)] transition-all duration-200 hover:bg-[var(--primary-dark)] active:scale-[0.98] ${
-                shuffleActive ? "scale-[0.99]" : ""
-              }`}
-              aria-pressed={shuffleActive}
-            >
-              <span className="material-symbols-outlined mr-2 text-2xl transition-transform duration-500 group-hover:rotate-180">
-                shuffle
-              </span>
-              <span className="text-lg font-bold tracking-wide">
-                Shuffle &amp; Eat
-              </span>
-            </button>
+          <div className="mx-auto flex w-full max-w-none flex-col gap-4 px-4 pb-4 sm:px-6 lg:px-10 2xl:px-16">
             <CategoryChips
               categories={CATEGORIES}
               selected={selectedCategory}
@@ -353,7 +340,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-8 sm:px-6 lg:px-10">
+        <div className="mx-auto flex w-full max-w-none flex-col gap-4 px-4 pb-8 sm:px-6 lg:px-10 2xl:px-16">
           {loading ? (
             <div className="space-y-4">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -372,13 +359,22 @@ export default function HomePage() {
               No places yet. Try a different category.
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {displayPlaces.map((place, index) => {
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-[var(--text)]">
+                  Top 3 Places This Week
+                </h2>
+                <span className="text-xs text-[var(--text-muted)]">
+                  Updated recently
+                </span>
+              </div>
+              <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
+                {displayPlaces.slice(0, 3).map((place, index) => {
                 const votes = computeVoteCounts(place);
                 const chips = getCategoryChips(place, 3);
                 const status = buildStatus(place);
                 const span =
-                  index === 0 ? "sm:col-span-2 lg:col-span-2" : "";
+                  index === 0 ? "md:col-span-2 xl:col-span-2" : "";
                 return (
                   <div key={String(place.id)} className={span}>
                     <PlaceCard
@@ -393,14 +389,67 @@ export default function HomePage() {
                     />
                   </div>
                 );
-              })}
+                })}
+              </div>
+
+              {displayPlaces.length > 3 ? (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-lg font-semibold text-[var(--text)]">
+                      More Places Worth Trying
+                    </h2>
+                    <div className="sticky top-[96px] z-40">
+                      <button
+                        type="button"
+                        onClick={handleRefresh}
+                        className={`group relative flex h-11 items-center justify-center overflow-hidden rounded-2xl bg-[var(--primary)] px-4 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition-all duration-200 hover:bg-[var(--primary-dark)] active:scale-[0.98] ${
+                          shuffleActive ? "scale-[0.99]" : ""
+                        }`}
+                        aria-pressed={shuffleActive}
+                      >
+                        <span
+                          className={`material-symbols-outlined mr-2 text-lg transition-transform duration-500 ${
+                            shuffleActive ? "rotate-180" : "group-hover:rotate-180"
+                          }`}
+                        >
+                          shuffle
+                        </span>
+                        Shuffle
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
+                    {displayPlaces.slice(3).map((place, index) => {
+                      const votes = computeVoteCounts(place);
+                      const chips = getCategoryChips(place, 3);
+                      const status = buildStatus(place);
+                      return (
+                        <div key={String(place.id)}>
+                        <PlaceCard
+                          place={place}
+                          rank={index + 4}
+                          chips={chips}
+                          statusLabel={status}
+                          voteCounts={votes}
+                          size="stacked"
+                          onSelect={(value) =>
+                            handleSelectPlace(value, index + 4)
+                          }
+                          onVote={handleVoteForPlace}
+                        />
+                      </div>
+                    );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
         </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 z-50 w-full border-t border-slate-100 bg-[var(--surface)] shadow-[var(--shadow-nav)]">
-        <div className="mx-auto flex h-[84px] max-w-6xl items-start justify-around px-4 pt-3 pb-8">
+      <nav className="fixed bottom-0 left-0 z-50 w-full border-t border-slate-100 bg-[var(--surface)]/95 backdrop-blur-md shadow-[var(--shadow-nav)]">
+        <div className="mx-auto flex h-[84px] max-w-none items-start justify-around px-4 pt-3 pb-8 sm:px-6 lg:px-10 2xl:px-16">
           <button
             type="button"
             className="group flex flex-1 flex-col items-center gap-1.5"

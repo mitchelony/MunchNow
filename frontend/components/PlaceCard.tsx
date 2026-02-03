@@ -91,7 +91,7 @@ export default function PlaceCard({
             {chipsList.map((chip) => (
               <span
                 key={chip}
-                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${chipClass(
+                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold tracking-wide ${chipClass(
                   chip
                 )}`}
               >
@@ -101,7 +101,7 @@ export default function PlaceCard({
           </div>
           <div className="flex items-center gap-2">
             {meta ? (
-              <span className="text-xs font-medium text-[var(--text-muted)]">
+              <span className="whitespace-nowrap text-xs font-medium text-[var(--text-muted)]">
                 {meta}
               </span>
             ) : null}
