@@ -19,6 +19,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       capture_pageview: false,
       capture_pageleave: true,
     });
+
+    (window as { posthog?: typeof posthog }).posthog = posthog;
   }, []);
 
   return <PostHogProvider client={posthog}>{children}</PostHogProvider>;
