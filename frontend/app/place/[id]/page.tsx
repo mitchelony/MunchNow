@@ -169,47 +169,6 @@ export default function PlacePage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="mb-8">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="h-5 w-1 rounded-full bg-[var(--primary)]" />
-              <h3 className="text-xl font-bold tracking-tight text-[var(--text)]">
-                The Vibe
-              </h3>
-            </div>
-            <p className="text-lg font-medium leading-relaxed text-[var(--text-muted)]">
-              &quot;{PLACE_DETAILS.vibe}&quot;
-            </p>
-          </div>
-
-          <div className="mb-8">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="h-5 w-1 rounded-full bg-[var(--primary)]" />
-              <h3 className="text-xl font-bold tracking-tight text-[var(--text)]">
-                Must Try
-              </h3>
-            </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="mb-1 flex items-center gap-2">
-                    <h4 className="text-lg font-bold text-[var(--text)]">
-                      {PLACE_DETAILS.mustTry.title}
-                    </h4>
-                    <span
-                      className="material-symbols-outlined filled text-sm text-orange-500"
-                      title="Spicy"
-                    >
-                      local_fire_department
-                    </span>
-                  </div>
-                  <p className="text-base leading-relaxed text-[var(--text-muted)]">
-                    {PLACE_DETAILS.mustTry.detail}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-8">
             <div className="mb-4 flex items-center gap-3">
               <div className="h-5 w-1 rounded-full bg-[var(--primary)]" />
               <h3 className="text-xl font-bold tracking-tight text-[var(--text)]">

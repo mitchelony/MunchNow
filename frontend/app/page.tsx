@@ -9,6 +9,7 @@ import {
   type TouchEvent,
 } from "react";
 import posthog from "posthog-js";
+import Link from "next/link";
 import CategoryChips from "../components/CategoryChips";
 import PlaceCard from "../components/PlaceCard";
 import TopBar from "../components/TopBar";
@@ -44,9 +45,9 @@ const CATEGORY_TO_ANALYTICS: Record<string, string> = {
 const CATEGORY_THEME: Record<string, { primary: string; dark: string; soft: string }> =
   {
     "Quick Bites": {
-      primary: "#f97316",
-      dark: "#ea580c",
-      soft: "rgba(249, 115, 22, 0.16)",
+      primary: "#6366f1",
+      dark: "#4f46e5",
+      soft: "rgba(99, 102, 241, 0.16)",
     },
     Cheap: {
       primary: "#16a34a",
@@ -359,7 +360,7 @@ export default function HomePage() {
       className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-28"
       style={themeStyle}
     >
-      <header className="fixed top-0 left-0 z-50 w-full border-b border-slate-200/50 bg-[var(--surface)]/95 backdrop-blur-md transition-all">
+      <header className="fixed top-0 left-0 z-50 w-full border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md transition-all">
         <div className="mx-auto flex w-full max-w-none flex-col gap-3 px-4 py-4 sm:px-6 lg:px-10 2xl:px-16">
           <TopBar />
         </div>
@@ -511,8 +512,8 @@ export default function HomePage() {
               Discover
             </span>
           </button>
-          <button
-            type="button"
+          <Link
+            href="/saved"
             className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
           >
             <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
@@ -521,9 +522,9 @@ export default function HomePage() {
               </span>
             </div>
             <span className="text-[11px] font-medium">Saved</span>
-          </button>
-          <button
-            type="button"
+          </Link>
+          <Link
+            href="/info"
             className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
           >
             <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
@@ -532,7 +533,7 @@ export default function HomePage() {
               </span>
             </div>
             <span className="text-[11px] font-medium">Info</span>
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -603,41 +604,6 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className="h-5 w-1 rounded-full bg-[var(--primary)]" />
-                    <h4 className="text-lg font-bold text-[var(--text)]">
-                      The Vibe
-                    </h4>
-                  </div>
-                  <p className="text-base font-medium text-[var(--text-muted)]">
-                    \"Loud, energetic, and perfect for groups. Expect grease,
-                    graffiti on the walls, and the best playlist in town.\"
-                  </p>
-                </div>
-
-                <div>
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className="h-5 w-1 rounded-full bg-[var(--primary)]" />
-                    <h4 className="text-lg font-bold text-[var(--text)]">
-                      Must Try
-                    </h4>
-                  </div>
-                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                    <div className="flex items-center gap-2">
-                      <h5 className="text-base font-bold text-[var(--text)]">
-                        Hot Honey Pepperoni
-                      </h5>
-                      <span className="material-symbols-outlined filled text-sm text-orange-500">
-                        local_fire_department
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm text-[var(--text-muted)]">
-                      Crispy cups, spicy honey drizzle, fresh basil. A local
-                      legend.
-                    </p>
-                  </div>
-                </div>
               </div>
 
               <div className="space-y-5">
@@ -666,7 +632,7 @@ export default function HomePage() {
 
                   <div className="mt-4 flex items-center gap-4 text-sm font-semibold text-[var(--text-muted)]">
                     <span className="inline-flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--success-soft)] text-[var(--success)]">
+                      <span className="flex h-8 w-8 items-center justify-center text-[var(--success)]">
                         <span className="material-symbols-outlined text-[18px]">
                           thumb_up
                         </span>
@@ -674,7 +640,7 @@ export default function HomePage() {
                       {computeVoteCounts(voteTarget).worth}
                     </span>
                     <span className="inline-flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--warning-soft)] text-[var(--warning)]">
+                      <span className="flex h-8 w-8 items-center justify-center text-[var(--warning)]">
                         <span className="material-symbols-outlined text-[18px]">
                           sentiment_neutral
                         </span>
@@ -682,7 +648,7 @@ export default function HomePage() {
                       {computeVoteCounts(voteTarget).mid}
                     </span>
                     <span className="inline-flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--danger-soft)] text-[var(--danger)]">
+                      <span className="flex h-8 w-8 items-center justify-center text-[var(--danger)]">
                         <span className="material-symbols-outlined text-[18px]">
                           thumb_down
                         </span>
