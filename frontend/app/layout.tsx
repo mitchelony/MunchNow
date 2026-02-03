@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
@@ -67,7 +68,9 @@ export default function RootLayout({
         className={`${inter.variable} ${jakarta.variable} min-h-screen antialiased`}
       >
         <Providers>
-          <PageViewTracker />
+          <Suspense fallback={null}>
+            <PageViewTracker />
+          </Suspense>
           {children}
         </Providers>
         <Analytics />
