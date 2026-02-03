@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import posthog from "posthog-js";
 import CategoryChips from "../components/CategoryChips";
 import PlaceCard from "../components/PlaceCard";
@@ -58,11 +58,33 @@ function getCategoryChips(place: Place, max: number) {
   const chips = new Set<string>();
   if (place.categories) {
     place.categories.forEach((value) => {
-      if (chips.size < max) chips.add(formatCategoryLabel(value));
+      if (chips.size >= max) return;
+      const text = String(value);
+      const parts = text
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (parts.length === 0) {
+        chips.add(formatCategoryLabel(value));
+        return;
+      }
+      parts.forEach((part) => {
+        if (chips.size < max) chips.add(formatCategoryLabel(part));
+      });
     });
   }
   if (chips.size < max && place.category) {
-    chips.add(formatCategoryLabel(place.category));
+    const parts = String(place.category)
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (parts.length === 0) {
+      chips.add(formatCategoryLabel(place.category));
+    } else {
+      parts.forEach((part) => {
+        if (chips.size < max) chips.add(formatCategoryLabel(part));
+      });
+    }
   }
   if (chips.size === 0) chips.add(FALLBACK_CATEGORY);
   return Array.from(chips).slice(0, max);
@@ -158,7 +180,7 @@ export default function HomePage() {
       city: "Huntsville",
       category: categoryParam,
       time_window: "7d",
-      limit: 12,
+      limit: 10,
     })
       .then((data) => {
         if (isActive) setPlaces(data);
@@ -210,32 +232,42 @@ export default function HomePage() {
     setVoteTarget(place);
   };
 
-  const handleVote = async (vote: VoteValue) => {
-    if (!voteTarget) return;
+  const handleVoteForPlace = async (place: Place, vote: VoteValue) => {
+    if (!sessionId) {
+      setToast("Try again in a moment.");
+      return;
+    }
     setVoteSubmitting(true);
     try {
       await submitVote({
-        place_id: voteTarget.id,
+        place_id: place.id,
         vote,
         session_id: sessionId,
       });
       posthog.capture("vote_submitted", {
-        place_id: voteTarget.id,
+        place_id: place.id,
         vote_type: vote,
       });
       setPlaces((prev) =>
-        prev.map((place) =>
-          place.id === voteTarget.id ? applyVoteToPlace(place, vote) : place
+        prev.map((item) =>
+          item.id === place.id ? applyVoteToPlace(item, vote) : item
         )
       );
-      setVoteTarget((prev) => (prev ? applyVoteToPlace(prev, vote) : prev));
+      if (voteTarget?.id === place.id) {
+        setVoteTarget((prev) => (prev ? applyVoteToPlace(prev, vote) : prev));
+      }
       setToast("Vote saved");
     } catch {
       setToast("Vote failed. Try again later.");
     } finally {
       setVoteSubmitting(false);
-      setVoteTarget(null);
     }
+  };
+
+  const handleVote = async (vote: VoteValue) => {
+    if (!voteTarget) return;
+    await handleVoteForPlace(voteTarget, vote);
+    setVoteTarget(null);
   };
 
   const handleRefresh = () => {
@@ -261,11 +293,11 @@ export default function HomePage() {
     });
   };
 
-  const handleSheetTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleSheetTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     sheetTouchStart.current = event.touches[0]?.clientY ?? null;
   };
 
-  const handleSheetTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleSheetTouchMove = (event: TouchEvent<HTMLDivElement>) => {
     if (!sheetTouchStart.current) return;
     const current = event.touches[0]?.clientY ?? sheetTouchStart.current;
     if (current - sheetTouchStart.current > 70) {
@@ -274,176 +306,159 @@ export default function HomePage() {
     }
   };
 
-  const featured = places.slice(0, 3);
-  const quickPicks = places.slice(3, 12);
+  const displayPlaces = places.slice(0, 10);
 
   return (
-    <main className="min-h-screen">
-      <div className="relative">
-        <div className="pointer-events-none absolute inset-0 overflow-x-clip">
-          <div className="absolute -top-36 left-0 right-0 h-72 bg-[radial-gradient(circle_at_top,_var(--accent-soft),_transparent)]" />
-          <div className="absolute -top-12 right-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,_var(--accent-soft),_transparent)]" />
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-28">
+      <header className="sticky top-0 z-20 border-b border-slate-200/50 bg-[var(--bg)]/95 backdrop-blur-md transition-all">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
+          <TopBar />
         </div>
-        <div className="relative mx-auto flex max-w-[520px] flex-col gap-6 px-4 pb-14 pt-24 sm:max-w-[760px] sm:px-6 lg:max-w-[1200px] lg:gap-8 lg:px-10 xl:max-w-[1320px]">
-          <div className="sticky top-0 z-30 -mx-4 bg-[var(--bg)]/95 px-4 pb-4 pt-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
-            <TopBar />
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-3xl font-semibold text-[var(--text)] sm:text-4xl">
-                  What&apos;s worth it right now?
-                </h1>
-                <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                  <span className="h-2 w-2 animate-pulse-slow rounded-full bg-[var(--accent)]" />
-                  Updated this week • Live votes
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  className={`rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                    shuffleActive
-                      ? "scale-[0.98] border-[var(--accent)] text-[var(--accent)] shadow-[var(--shadow-soft)]"
-                      : ""
-                  }`}
-                  aria-pressed={shuffleActive}
-                >
-                  Shuffle picks
-                </button>
-                <span className="rounded-full bg-[var(--accent-soft)] px-3 py-2 text-xs font-semibold text-[var(--accent)]">
-                  {places.length} spots
-                </span>
-              </div>
-            </div>
-            <div className="mt-4">
-              <CategoryChips
-                categories={CATEGORIES}
-                selected={selectedCategory}
-                onSelect={handleSelectCategory}
-              />
-            </div>
-          </div>
+      </header>
 
-          <div className="grid gap-8 lg:grid-cols-[3fr_2fr] lg:items-start">
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Featured picks</h2>
-                <span className="text-xs text-[var(--text-muted)]">
-                  Updated recently
-                </span>
-              </div>
-              {loading ? (
-                <div className="space-y-3">
-                  <div className="h-36 rounded-3xl bg-[var(--surface-2)] animate-pulse" />
-                  <div className="h-24 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
-                  <div className="h-24 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
-                </div>
-              ) : error ? (
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text-muted)]">
-                  {error}
-                </div>
-              ) : featured.length === 0 ? (
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text-muted)]">
-                  No places yet. Try a different category.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {featured.map((place, index) => {
-                    const votes = computeVoteCounts(place);
-                    const chips = getCategoryChips(place, 2);
-                    const status = buildStatus(place);
-                    return (
-                      <PlaceCard
-                        key={String(place.id)}
-                        place={place}
-                        rank={index + 1}
-                        chips={chips}
-                        statusLabel={status}
-                        votesLabel={`${votes.total} votes`}
-                        size={index === 0 ? "hero" : "stacked"}
-                        onSelect={(value) =>
-                          handleSelectPlace(value, index + 1)
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Quick picks</h2>
-                <span className="text-xs text-[var(--text-muted)]">
-                  Tap to see more
-                </span>
-              </div>
-              {loading ? (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div
-                      key={`skeleton-${index}`}
-                      className="h-20 rounded-2xl bg-[var(--surface-2)] animate-pulse"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-                  {quickPicks.map((place, index) => {
-                    const votes = computeVoteCounts(place);
-                    const chips = getCategoryChips(place, 1);
-                    const status = buildStatus(place);
-                    return (
-                      <PlaceCard
-                        key={String(place.id)}
-                        place={place}
-                        chips={chips}
-                        statusLabel={status}
-                        votesLabel={`${votes.total} votes`}
-                        size="compact"
-                        onSelect={(value) =>
-                          handleSelectPlace(value, index + 4)
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
-
-          <p className="text-center text-xs text-[var(--text-muted)]">
-            Tap a place, open maps, then drop a quick vote.
+      <main className="flex w-full flex-1 flex-col">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-4 sm:px-6 lg:px-10">
+          <h1 className="font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-[var(--text)]">
+            Hungry in
+            <br />
+            Huntsville?
+          </h1>
+          <p className="mt-2 text-[15px] font-medium text-[var(--text-muted)]">
+            Curated picks for the indecisive eater.
           </p>
         </div>
-      </div>
+
+        <div className="sticky top-[72px] z-10 w-full">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-4 sm:px-6 lg:px-10">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className={`group relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--primary)] text-white shadow-[var(--shadow-soft)] transition-all duration-200 hover:bg-[var(--primary-dark)] active:scale-[0.98] ${
+                shuffleActive ? "scale-[0.99]" : ""
+              }`}
+              aria-pressed={shuffleActive}
+            >
+              <span className="material-symbols-outlined mr-2 text-2xl transition-transform duration-500 group-hover:rotate-180">
+                shuffle
+              </span>
+              <span className="text-lg font-bold tracking-wide">
+                Shuffle &amp; Eat
+              </span>
+            </button>
+            <CategoryChips
+              categories={CATEGORIES}
+              selected={selectedCategory}
+              onSelect={handleSelectCategory}
+            />
+          </div>
+        </div>
+
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-8 sm:px-6 lg:px-10">
+          {loading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="h-48 rounded-2xl bg-[var(--surface-2)] animate-pulse"
+                />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text-muted)]">
+              {error}
+            </div>
+          ) : displayPlaces.length === 0 ? (
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text-muted)]">
+              No places yet. Try a different category.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {displayPlaces.map((place, index) => {
+                const votes = computeVoteCounts(place);
+                const chips = getCategoryChips(place, 3);
+                const status = buildStatus(place);
+                const span =
+                  index === 0 ? "sm:col-span-2 lg:col-span-2" : "";
+                return (
+                  <div key={String(place.id)} className={span}>
+                    <PlaceCard
+                      place={place}
+                      rank={index + 1}
+                      chips={chips}
+                      statusLabel={status}
+                      voteCounts={votes}
+                      size={index === 0 ? "hero" : "stacked"}
+                      onSelect={(value) => handleSelectPlace(value, index + 1)}
+                      onVote={handleVoteForPlace}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
+
+      <nav className="fixed bottom-0 left-0 z-50 w-full border-t border-slate-100 bg-[var(--surface)] shadow-[var(--shadow-nav)]">
+        <div className="mx-auto flex h-[84px] max-w-6xl items-start justify-around px-4 pt-3 pb-8">
+          <button
+            type="button"
+            className="group flex flex-1 flex-col items-center gap-1.5"
+            aria-current="page"
+          >
+            <div className="rounded-full bg-[var(--primary-soft)] p-1 transition-colors">
+              <span className="material-symbols-outlined filled text-[26px] text-[var(--primary)]">
+                explore
+              </span>
+            </div>
+            <span className="text-[11px] font-bold text-[var(--primary)]">
+              Discover
+            </span>
+          </button>
+          <button
+            type="button"
+            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
+          >
+            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
+              <span className="material-symbols-outlined text-[26px]">
+                bookmark
+              </span>
+            </div>
+            <span className="text-[11px] font-medium">Saved</span>
+          </button>
+          <button
+            type="button"
+            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
+          >
+            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
+              <span className="material-symbols-outlined text-[26px]">
+                info
+              </span>
+            </div>
+            <span className="text-[11px] font-medium">Info</span>
+          </button>
+        </div>
+      </nav>
 
       {voteTarget ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm md:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
           onClick={() => setVoteTarget(null)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)] md:max-w-lg"
+            className="w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-soft)]"
             onClick={(event) => event.stopPropagation()}
             onTouchStart={handleSheetTouchStart}
             onTouchMove={handleSheetTouchMove}
           >
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--border)]" />
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
+              <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
                   {pickCategory(voteTarget)}
                 </p>
-                <h3 className="text-xl font-semibold">{voteTarget.name}</h3>
-                {voteTarget.address ? (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {voteTarget.address}
-                  </p>
-                ) : null}
-                <p className="text-xs text-[var(--text-muted)]">
-                  Based on votes in the last 7 days
-                </p>
+                <h3 className="text-2xl font-semibold text-[var(--text)]">
+                  {voteTarget.name}
+                </h3>
               </div>
               <button
                 type="button"
@@ -454,27 +469,149 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-semibold text-[var(--text-muted)]">
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center">
-                Worth it {computeVoteCounts(voteTarget).worth}
+            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.2fr_1fr]">
+              <div className="space-y-6">
+                <div>
+                  <p className="text-base font-medium text-[var(--text-muted)]">
+                    Classic Dive & Slices in Downtown Huntsville
+                  </p>
+                  {voteTarget.address ? (
+                    <p className="mt-2 text-sm text-[var(--text-muted)]">
+                      {voteTarget.address}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
+                    <p className="text-xs font-semibold text-[var(--text-muted)]">
+                      Distance
+                    </p>
+                    <p className="text-sm font-bold text-[var(--text)]">
+                      1.2 mi
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
+                    <p className="text-xs font-semibold text-[var(--text-muted)]">
+                      Hours
+                    </p>
+                    <p className="text-sm font-bold text-[var(--text)]">
+                      Until 2 AM
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
+                    <p className="text-xs font-semibold text-[var(--text-muted)]">
+                      Price
+                    </p>
+                    <p className="text-sm font-bold text-[var(--text)]">$$</p>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="h-5 w-1 rounded-full bg-[var(--primary)]" />
+                    <h4 className="text-lg font-bold text-[var(--text)]">
+                      The Vibe
+                    </h4>
+                  </div>
+                  <p className="text-base font-medium text-[var(--text-muted)]">
+                    \"Loud, energetic, and perfect for groups. Expect grease,
+                    graffiti on the walls, and the best playlist in town.\"
+                  </p>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="h-5 w-1 rounded-full bg-[var(--primary)]" />
+                    <h4 className="text-lg font-bold text-[var(--text)]">
+                      Must Try
+                    </h4>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                    <div className="flex items-center gap-2">
+                      <h5 className="text-base font-bold text-[var(--text)]">
+                        Hot Honey Pepperoni
+                      </h5>
+                      <span className="material-symbols-outlined filled text-sm text-orange-500">
+                        local_fire_department
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-[var(--text-muted)]">
+                      Crispy cups, spicy honey drizzle, fresh basil. A local
+                      legend.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center">
-                Mid {computeVoteCounts(voteTarget).mid}
-              </div>
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center">
-                Not worth it {computeVoteCounts(voteTarget).skip}
+
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-lg font-bold text-[var(--text)]">
+                        Verdict
+                      </h4>
+                      <p className="text-sm text-[var(--text-muted)]">
+                        {computeVoteCounts(voteTarget).total} student votes
+                      </p>
+                    </div>
+                    <div className="flex -space-x-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 ring-2 ring-[var(--surface-2)]">
+                        JD
+                      </div>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 ring-2 ring-[var(--surface-2)]">
+                        MK
+                      </div>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-xs font-bold text-[var(--text-muted)] ring-2 ring-[var(--surface-2)]">
+                        +
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center gap-4 text-sm font-semibold text-[var(--text-muted)]">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--success-soft)] text-[var(--success)]">
+                        <span className="material-symbols-outlined text-[18px]">
+                          thumb_up
+                        </span>
+                      </span>
+                      {computeVoteCounts(voteTarget).worth}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--warning-soft)] text-[var(--warning)]">
+                        <span className="material-symbols-outlined text-[18px]">
+                          sentiment_neutral
+                        </span>
+                      </span>
+                      {computeVoteCounts(voteTarget).mid}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--danger-soft)] text-[var(--danger)]">
+                        <span className="material-symbols-outlined text-[18px]">
+                          thumb_down
+                        </span>
+                      </span>
+                      {computeVoteCounts(voteTarget).skip}
+                    </span>
+                  </div>
+
+                  <div className="mt-4">
+                    <VoteButtons
+                      onVote={handleVote}
+                      isSubmitting={voteSubmitting}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenMaps(voteTarget)}
+                  className="w-full rounded-2xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-dark)]"
+                >
+                  Open in Maps
+                </button>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => handleOpenMaps(voteTarget)}
-              className="mt-4 w-full rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-strong)]"
-            >
-              Open in Maps
-            </button>
-
-            <VoteButtons onVote={handleVote} isSubmitting={voteSubmitting} />
           </div>
         </div>
       ) : null}
@@ -484,6 +621,6 @@ export default function HomePage() {
           {toast}
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }
