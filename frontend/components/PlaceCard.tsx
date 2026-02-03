@@ -207,7 +207,7 @@ export default function PlaceCard({
               thumb_up
             </span>
             {activeVote === "worth_it" ? (
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-[var(--success)]">
+              <span className="absolute right-1 top-1 text-white">
                 <span className="material-symbols-outlined text-[12px]">
                   check
                 </span>
@@ -231,7 +231,7 @@ export default function PlaceCard({
               sentiment_neutral
             </span>
             {activeVote === "mid" ? (
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-[var(--warning)]">
+              <span className="absolute right-1 top-1 text-white">
                 <span className="material-symbols-outlined text-[12px]">
                   check
                 </span>
@@ -255,7 +255,7 @@ export default function PlaceCard({
               thumb_down
             </span>
             {activeVote === "skip" ? (
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-[var(--danger)]">
+              <span className="absolute right-1 top-1 text-white">
                 <span className="material-symbols-outlined text-[12px]">
                   check
                 </span>

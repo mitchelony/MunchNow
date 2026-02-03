@@ -773,7 +773,12 @@ export default function HomePage() {
 
                   <div className="mt-4">
                     {voteTarget &&
-                    getCooldownRemaining(voteTarget.id) > 0 ? (
+                    getCooldownRemaining(voteTarget.id) > 0 &&
+                    !(
+                      voteFeedback[String(voteTarget.id)] &&
+                      now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
+                        FEEDBACK_WINDOW_MS
+                    ) ? (
                       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
                         Next vote in {formatRemaining(
                           getCooldownRemaining(voteTarget.id)
