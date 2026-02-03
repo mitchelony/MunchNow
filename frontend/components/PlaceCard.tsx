@@ -23,6 +23,7 @@ type PlaceCardProps = {
     skip: number;
     total: number;
   };
+  cooldownLabel?: string | null;
   rank?: number;
   size?: "hero" | "stacked" | "compact";
   onSelect: (place: Place) => void;
@@ -34,6 +35,7 @@ export default function PlaceCard({
   chips,
   statusLabel,
   voteCounts,
+  cooldownLabel,
   rank,
   size = "compact",
   onSelect,
@@ -172,44 +174,50 @@ export default function PlaceCard({
           </div>
         ) : null}
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={(event) => handleVote(event, "worth_it")}
-          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--success)]/30 hover:bg-[var(--success)] hover:text-white"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            thumb_up
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider">
-            Worth it!
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={(event) => handleVote(event, "mid")}
-          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--warning)]/30 hover:bg-[var(--warning)] hover:text-white"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            sentiment_neutral
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider">
-            Mid
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={(event) => handleVote(event, "skip")}
-          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--danger)]/30 hover:bg-[var(--danger)] hover:text-white"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            thumb_down
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider">
-            Skip
-          </span>
-        </button>
-      </div>
+      {cooldownLabel ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+          Next vote in {cooldownLabel}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={(event) => handleVote(event, "worth_it")}
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--success)]/30 hover:bg-[var(--success)] hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              thumb_up
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              Worth it!
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={(event) => handleVote(event, "mid")}
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--warning)]/30 hover:bg-[var(--warning)] hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              sentiment_neutral
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              Mid
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={(event) => handleVote(event, "skip")}
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2.5 text-[var(--text-muted)] transition active:scale-95 hover:border-[var(--danger)]/30 hover:bg-[var(--danger)] hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              thumb_down
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              Skip
+            </span>
+          </button>
+        </div>
+      )}
     </article>
   );
 }

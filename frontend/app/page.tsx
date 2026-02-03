@@ -170,9 +170,30 @@ export default function HomePage() {
   const [voteSubmitting, setVoteSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [shuffleActive, setShuffleActive] = useState(false);
+  const [voteCooldowns, setVoteCooldowns] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(() => Date.now());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shuffleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sheetTouchStart = useRef<number | null>(null);
+
+  const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+  const COOLDOWN_KEY = "munch_vote_cooldowns";
+
+  const formatRemaining = (ms: number) => {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  };
+
+  const getCooldownRemaining = (placeId: Place["id"]) => {
+    const key = String(placeId);
+    const expiresAt = voteCooldowns[key];
+    if (!expiresAt) return 0;
+    return Math.max(0, expiresAt - now);
+  };
 
   const [initialLoad, setInitialLoad] = useState(true);
 
@@ -183,6 +204,36 @@ export default function HomePage() {
 
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(COOLDOWN_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as Record<string, number>;
+      const cleaned: Record<string, number> = {};
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (typeof value === "number" && value > Date.now()) {
+          cleaned[key] = value;
+        }
+      });
+      setVoteCooldowns(cleaned);
+    } catch {
+      window.localStorage.removeItem(COOLDOWN_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(COOLDOWN_KEY, JSON.stringify(voteCooldowns));
+  }, [voteCooldowns]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const sessionTracked = useRef(false);
@@ -276,6 +327,11 @@ export default function HomePage() {
       setToast("Try again in a moment.");
       return;
     }
+    const remaining = getCooldownRemaining(place.id);
+    if (remaining > 0) {
+      setToast("You can vote again tomorrow.");
+      return;
+    }
     setVoteSubmitting(true);
     try {
       await submitVote({
@@ -295,6 +351,10 @@ export default function HomePage() {
       if (voteTarget?.id === place.id) {
         setVoteTarget((prev) => (prev ? applyVoteToPlace(prev, vote) : prev));
       }
+      setVoteCooldowns((prev) => ({
+        ...prev,
+        [String(place.id)]: Date.now() + COOLDOWN_MS,
+      }));
       setToast("Vote saved");
     } catch {
       setToast("Vote failed. Try again later.");
@@ -417,10 +477,13 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-                {displayPlaces.slice(0, 3).map((place, index) => {
+              {displayPlaces.slice(0, 3).map((place, index) => {
                 const votes = computeVoteCounts(place);
                 const chips = getCategoryChips(place, 3);
                 const status = buildStatus(place);
+                const remaining = getCooldownRemaining(place.id);
+                const cooldownLabel =
+                  remaining > 0 ? formatRemaining(remaining) : null;
                 const span =
                   index === 0 ? "md:col-span-2 xl:col-span-2" : "";
                 return (
@@ -431,6 +494,7 @@ export default function HomePage() {
                       chips={chips}
                       statusLabel={status}
                       voteCounts={votes}
+                      cooldownLabel={cooldownLabel}
                       size={index === 0 ? "hero" : "stacked"}
                       onSelect={(value) => handleSelectPlace(value, index + 1)}
                       onVote={handleVoteForPlace}
@@ -471,19 +535,23 @@ export default function HomePage() {
                       const votes = computeVoteCounts(place);
                       const chips = getCategoryChips(place, 3);
                       const status = buildStatus(place);
+                      const remaining = getCooldownRemaining(place.id);
+                      const cooldownLabel =
+                        remaining > 0 ? formatRemaining(remaining) : null;
                       return (
                         <div key={String(place.id)}>
-                        <PlaceCard
-                          place={place}
-                          rank={index + 4}
-                          chips={chips}
-                          statusLabel={status}
-                          voteCounts={votes}
-                          size="stacked"
-                          onSelect={(value) =>
-                            handleSelectPlace(value, index + 4)
-                          }
-                          onVote={handleVoteForPlace}
+                          <PlaceCard
+                            place={place}
+                            rank={index + 4}
+                            chips={chips}
+                            statusLabel={status}
+                            voteCounts={votes}
+                            cooldownLabel={cooldownLabel}
+                            size="stacked"
+                            onSelect={(value) =>
+                              handleSelectPlace(value, index + 4)
+                            }
+                            onVote={handleVoteForPlace}
                         />
                       </div>
                     );
@@ -658,10 +726,19 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-4">
-                    <VoteButtons
-                      onVote={handleVote}
-                      isSubmitting={voteSubmitting}
-                    />
+                    {voteTarget &&
+                    getCooldownRemaining(voteTarget.id) > 0 ? (
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+                        Next vote in {formatRemaining(
+                          getCooldownRemaining(voteTarget.id)
+                        )}
+                      </div>
+                    ) : (
+                      <VoteButtons
+                        onVote={handleVote}
+                        isSubmitting={voteSubmitting}
+                      />
+                    )}
                   </div>
                 </div>
 
