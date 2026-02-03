@@ -462,7 +462,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="sticky top-[72px] z-10 w-full">
+        <div className="sticky top-[96px] z-20 w-full">
           <div className="mx-auto flex w-full max-w-none flex-col gap-4 px-4 pb-4 sm:px-6 lg:px-10 2xl:px-16">
             <CategoryChips
               categories={CATEGORIES}
@@ -478,7 +478,7 @@ export default function HomePage() {
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={`skeleton-${index}`}
-                  className="h-48 rounded-2xl bg-[var(--surface-2)] animate-pulse"
+                  className="h-48 rounded-2xl skeleton-shimmer"
                 />
               ))}
             </div>
@@ -492,9 +492,11 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="sticky top-[96px] z-30 -mx-2 flex items-center justify-between rounded-2xl bg-[var(--bg)]/90 px-2 py-2 backdrop-blur">
                 <h2 className="text-lg font-semibold text-[var(--text)]">
-                  Top 3 Places This Week
+                  {displayPlaces.length < 3
+                    ? "Top Picks This Week"
+                    : "Top 3 Places This Week"}
                 </h2>
                 <span className="text-xs text-[var(--text-muted)]">
                   Updated recently
@@ -525,6 +527,9 @@ export default function HomePage() {
                       cooldownLabel={cooldownLabel}
                       activeVote={activeVote}
                       animateVote={animateVote}
+                      onCooldownClick={() =>
+                        setToast(`Next vote in ${formatRemaining(remaining)}`)
+                      }
                       size={index === 0 ? "hero" : "stacked"}
                       onSelect={(value) => handleSelectPlace(value, index + 1)}
                       onVote={handleVoteForPlace}
@@ -536,7 +541,7 @@ export default function HomePage() {
 
               {displayPlaces.length > 3 ? (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="sticky top-[96px] z-30 -mx-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[var(--bg)]/90 px-2 py-2 backdrop-blur">
                     <h2 className="text-lg font-semibold text-[var(--text)]">
                       More Places Worth Trying
                     </h2>
@@ -583,6 +588,11 @@ export default function HomePage() {
                             cooldownLabel={cooldownLabel}
                             activeVote={activeVote}
                             animateVote={animateVote}
+                            onCooldownClick={() =>
+                              setToast(
+                                `Next vote in ${formatRemaining(remaining)}`
+                              )
+                            }
                             size="stacked"
                             onSelect={(value) =>
                               handleSelectPlace(value, index + 4)
@@ -803,7 +813,7 @@ export default function HomePage() {
       ) : null}
 
       {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-[var(--text)] px-4 py-2 text-sm font-semibold text-[var(--bg)] shadow-[var(--shadow-soft)]">
+        <div className="fixed bottom-[104px] left-1/2 z-50 -translate-x-1/2 rounded-full bg-[var(--text)] px-4 py-2 text-sm font-semibold text-[var(--bg)] shadow-[var(--shadow-soft)]">
           {toast}
         </div>
       ) : null}

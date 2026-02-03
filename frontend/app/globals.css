@@ -125,6 +125,17 @@
   .animate-pop {
     animation: pop 320ms ease-out;
   }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--surface-2) 0%,
+      rgba(255, 255, 255, 0.6) 45%,
+      var(--surface-2) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
 }
 
 .material-symbols-outlined {
@@ -177,6 +188,15 @@
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: -200% 50%;
   }
 }
 

@@ -26,6 +26,7 @@ type PlaceCardProps = {
   cooldownLabel?: string | null;
   activeVote?: VoteValue | null;
   animateVote?: boolean;
+  onCooldownClick?: () => void;
   rank?: number;
   size?: "hero" | "stacked" | "compact";
   onSelect: (place: Place) => void;
@@ -40,6 +41,7 @@ export default function PlaceCard({
   cooldownLabel,
   activeVote,
   animateVote,
+  onCooldownClick,
   rank,
   size = "compact",
   onSelect,
@@ -179,15 +181,22 @@ export default function PlaceCard({
         ) : null}
       </div>
       {cooldownLabel ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onCooldownClick?.();
+          }}
+          className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]"
+        >
           Next vote in {cooldownLabel}
-        </div>
+        </button>
       ) : (
         <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={(event) => handleVote(event, "worth_it")}
-            className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
               activeVote === "worth_it"
                 ? "border-[var(--success)]/40 bg-[var(--success)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--success)]/30 hover:bg-[var(--success)] hover:text-white"
@@ -196,6 +205,13 @@ export default function PlaceCard({
             <span className="material-symbols-outlined text-[20px]">
               thumb_up
             </span>
+            {activeVote === "worth_it" ? (
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-[var(--success)]">
+                <span className="material-symbols-outlined text-[12px]">
+                  check
+                </span>
+              </span>
+            ) : null}
             <span className="text-[10px] font-bold uppercase tracking-wider">
               Worth it!
             </span>
@@ -203,7 +219,7 @@ export default function PlaceCard({
           <button
             type="button"
             onClick={(event) => handleVote(event, "mid")}
-            className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
               activeVote === "mid"
                 ? "border-[var(--warning)]/40 bg-[var(--warning)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--warning)]/30 hover:bg-[var(--warning)] hover:text-white"
@@ -212,6 +228,13 @@ export default function PlaceCard({
             <span className="material-symbols-outlined text-[20px]">
               sentiment_neutral
             </span>
+            {activeVote === "mid" ? (
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-[var(--warning)]">
+                <span className="material-symbols-outlined text-[12px]">
+                  check
+                </span>
+              </span>
+            ) : null}
             <span className="text-[10px] font-bold uppercase tracking-wider">
               Mid
             </span>
@@ -219,7 +242,7 @@ export default function PlaceCard({
           <button
             type="button"
             onClick={(event) => handleVote(event, "skip")}
-            className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
               activeVote === "skip"
                 ? "border-[var(--danger)]/40 bg-[var(--danger)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--danger)]/30 hover:bg-[var(--danger)] hover:text-white"
@@ -228,6 +251,13 @@ export default function PlaceCard({
             <span className="material-symbols-outlined text-[20px]">
               thumb_down
             </span>
+            {activeVote === "skip" ? (
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-[var(--danger)]">
+                <span className="material-symbols-outlined text-[12px]">
+                  check
+                </span>
+              </span>
+            ) : null}
             <span className="text-[10px] font-bold uppercase tracking-wider">
               Skip
             </span>
