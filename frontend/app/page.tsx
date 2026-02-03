@@ -8,13 +8,13 @@ import {
   type CSSProperties,
   type TouchEvent,
 } from "react";
-import posthog from "posthog-js";
 import Link from "next/link";
 import CategoryChips from "../components/CategoryChips";
 import PlaceCard from "../components/PlaceCard";
 import TopBar from "../components/TopBar";
 import VoteButtons from "../components/VoteButtons";
 import { getOrCreateSessionId, getTrending, submitVote } from "../lib/api";
+import { track } from "../lib/analytics";
 import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../lib/maps";
 import type { Place, VoteValue } from "../lib/types";
 
@@ -32,13 +32,6 @@ const CATEGORY_TO_API: Record<string, string> = {
   Cheap: "cheap",
   "Late Night": "late_night",
   "Coffee Spots": "coffee_spots",
-  "Local Favorite": "local_favorite",
-};
-const CATEGORY_TO_ANALYTICS: Record<string, string> = {
-  "Quick Bites": "quick_bites",
-  Cheap: "cheap",
-  "Late Night": "latenight",
-  "Coffee Spots": "coffee",
   "Local Favorite": "local_favorite",
 };
 
@@ -85,10 +78,19 @@ function pickCategory(place: Place) {
   return formatCategoryLabel(fromArray ?? place.category ?? FALLBACK_CATEGORY);
 }
 
-function toAnalyticsCategory(value?: string | null) {
-  if (!value) return undefined;
-  const label = formatCategoryLabel(value);
-  return CATEGORY_TO_ANALYTICS[label];
+type PlaceSection = "top_3" | "more_places";
+
+function buildPlaceProps(place: Place, section?: PlaceSection) {
+  const distance =
+    (place as { distance_miles?: number | null }).distance_miles ?? null;
+  return {
+    place_id: place.id,
+    place_name: place.name,
+    section,
+    tags: place.categories?.length ? place.categories : undefined,
+    price_tier: place.price_tier ?? null,
+    distance_miles: distance ?? undefined,
+  };
 }
 
 function getCategoryChips(place: Place, max: number) {
@@ -178,6 +180,9 @@ export default function HomePage() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shuffleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sheetTouchStart = useRef<number | null>(null);
+  const impressionsRef = useRef<
+    Record<string, { key: string; seen: Set<string> }>
+  >({});
 
   const COOLDOWN_MS = 24 * 60 * 60 * 1000;
   const COOLDOWN_KEY = "munch_vote_cooldowns";
@@ -256,29 +261,6 @@ export default function HomePage() {
     });
   }, [now, voteFeedback, FEEDBACK_WINDOW_MS]);
 
-  const sessionTracked = useRef(false);
-  useEffect(() => {
-    if (!sessionId || sessionTracked.current) return;
-    sessionTracked.current = true;
-    const referrer =
-      typeof document !== "undefined" ? document.referrer : "";
-    const source = referrer ? "referral" : "direct";
-    posthog.capture("session_start", { source });
-  }, [sessionId]);
-
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        posthog.capture("page_leave", { page: "home" });
-      }
-    };
-
-    window.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      window.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, []);
-
   useEffect(() => {
     let isActive = true;
     setLoading(true);
@@ -325,24 +307,28 @@ export default function HomePage() {
   const handleOpenMaps = (place: Place) => {
     const query = buildMapsQuery(place.name, place.address ?? null);
     const link = getPreferredMapsLink(query);
-    posthog.capture("maps_clicked", {
-      place_id: place.id,
+    track("open_in_maps", {
+      ...buildPlaceProps(place),
       provider: isIOS() ? "apple" : "google",
     });
     window.open(link, "_blank", "noopener,noreferrer");
   };
 
   const handleSelectPlace = (place: Place, rankPosition?: number) => {
-    posthog.capture("place_opened", {
-      place_id: place.id,
-      place_name: place.name,
-      category: toAnalyticsCategory(place.categories?.[0] ?? place.category),
-      rank_position: rankPosition,
+    track("place_open_modal", {
+      ...buildPlaceProps(
+        place,
+        rankPosition && rankPosition <= 3 ? "top_3" : "more_places"
+      ),
     });
     setVoteTarget(place);
   };
 
-  const handleVoteForPlace = async (place: Place, vote: VoteValue) => {
+  const handleVoteForPlace = async (
+    place: Place,
+    vote: VoteValue,
+    surface: "card" | "modal"
+  ) => {
     if (!sessionId) {
       setToast("Try again in a moment.");
       return;
@@ -359,9 +345,10 @@ export default function HomePage() {
         vote,
         session_id: sessionId,
       });
-      posthog.capture("vote_submitted", {
-        place_id: place.id,
-        vote_type: vote,
+      track("vote_cast", {
+        ...buildPlaceProps(place),
+        verdict: vote,
+        surface,
       });
       setPlaces((prev) =>
         prev.map((item) =>
@@ -389,7 +376,7 @@ export default function HomePage() {
 
   const handleVote = async (vote: VoteValue) => {
     if (!voteTarget) return;
-    await handleVoteForPlace(voteTarget, vote);
+    await handleVoteForPlace(voteTarget, vote, "modal");
     setVoteTarget(null);
   };
 
@@ -405,15 +392,12 @@ export default function HomePage() {
         ? [...prev.slice(0, 3), ...shufflePlaces(prev.slice(3))]
         : prev
     );
-    posthog.capture("shuffle_clicked", { section: "quick_picks" });
+    track("shuffle_click", { surface: "discover" });
   };
 
   const handleSelectCategory = (category: string) => {
     setInitialLoad(false);
     setSelectedCategory(category);
-    posthog.capture("category_selected", {
-      category: CATEGORY_TO_ANALYTICS[category],
-    });
   };
 
   const handleSheetTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -430,6 +414,40 @@ export default function HomePage() {
   };
 
   const displayPlaces = places.slice(0, 10);
+  const topPlaces = displayPlaces.slice(0, 3);
+  const morePlaces = displayPlaces.slice(3);
+  const topKey = useMemo(
+    () => topPlaces.map((place) => String(place.id)).join("|"),
+    [topPlaces]
+  );
+  const moreKey = useMemo(
+    () => morePlaces.map((place) => String(place.id)).join("|"),
+    [morePlaces]
+  );
+
+  useEffect(() => {
+    const trackSection = (
+      section: PlaceSection,
+      list: Place[],
+      key: string
+    ) => {
+      if (list.length === 0) return;
+      const current = impressionsRef.current[section];
+      if (!current || current.key !== key) {
+        impressionsRef.current[section] = { key, seen: new Set() };
+      }
+      const state = impressionsRef.current[section];
+      list.forEach((place) => {
+        const id = String(place.id);
+        if (state.seen.has(id)) return;
+        state.seen.add(id);
+        track("places_impression", buildPlaceProps(place, section));
+      });
+    };
+
+    trackSection("top_3", topPlaces, topKey);
+    trackSection("more_places", morePlaces, moreKey);
+  }, [topPlaces, morePlaces, topKey, moreKey]);
 
   const theme =
     CATEGORY_THEME[selectedCategory] ?? CATEGORY_THEME["Local Favorite"];
@@ -503,7 +521,7 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-              {displayPlaces.slice(0, 3).map((place, index) => {
+              {topPlaces.map((place, index) => {
                 const votes = computeVoteCounts(place);
                 const chips = getCategoryChips(place, 3);
                 const status = buildStatus(place);
@@ -532,7 +550,9 @@ export default function HomePage() {
                       }
                       size={index === 0 ? "hero" : "stacked"}
                       onSelect={(value) => handleSelectPlace(value, index + 1)}
-                      onVote={handleVoteForPlace}
+                      onVote={(place, vote) =>
+                        handleVoteForPlace(place, vote, "card")
+                      }
                     />
                   </div>
                 );
@@ -566,7 +586,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-                    {displayPlaces.slice(3).map((place, index) => {
+                    {morePlaces.map((place, index) => {
                       const votes = computeVoteCounts(place);
                       const chips = getCategoryChips(place, 3);
                       const status = buildStatus(place);
@@ -597,7 +617,9 @@ export default function HomePage() {
                             onSelect={(value) =>
                               handleSelectPlace(value, index + 4)
                             }
-                            onVote={handleVoteForPlace}
+                            onVote={(place, vote) =>
+                              handleVoteForPlace(place, vote, "card")
+                            }
                         />
                       </div>
                     );
