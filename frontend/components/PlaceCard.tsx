@@ -45,7 +45,7 @@ export default function PlaceCard({
   const summary = place.address ?? "Tap to see why locals love it.";
   const chipClass = (value: string) =>
     ({
-      "Quick Bites": "bg-orange-100 text-orange-700",
+      "Quick Bites": "bg-indigo-100 text-indigo-700",
       Cheap: "bg-emerald-100 text-emerald-700",
       "Late Night": "bg-purple-100 text-purple-700",
       "Coffee Spots": "bg-yellow-100 text-yellow-700",

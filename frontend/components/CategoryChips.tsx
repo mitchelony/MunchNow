@@ -5,7 +5,7 @@ type CategoryChipsProps = {
 };
 
 const CATEGORY_STYLES: Record<string, string> = {
-  "Quick Bites": "text-orange-700 bg-orange-100 border-orange-200",
+  "Quick Bites": "text-indigo-700 bg-indigo-100 border-indigo-200",
   Cheap: "text-emerald-700 bg-emerald-100 border-emerald-200",
   "Late Night": "text-purple-700 bg-purple-100 border-purple-200",
   "Coffee Spots": "text-yellow-700 bg-yellow-100 border-yellow-200",
@@ -26,7 +26,7 @@ export default function CategoryChips({
           "text-[var(--primary)] bg-[var(--primary-soft)] border-[var(--primary)]/20";
         const activeClass =
           {
-            "Quick Bites": "bg-orange-100 text-orange-700 border-orange-200",
+            "Quick Bites": "bg-indigo-100 text-indigo-700 border-indigo-200",
             Cheap: "bg-emerald-100 text-emerald-700 border-emerald-200",
             "Late Night": "bg-purple-100 text-purple-700 border-purple-200",
             "Coffee Spots": "bg-yellow-100 text-yellow-700 border-yellow-200",
