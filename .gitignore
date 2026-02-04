@@ -209,7 +209,8 @@ __marimo__/
 
 # macOS
 .DS_Store
-/Users/MAC/Documents/GitHub/MunchNow/.DS_Store
+/.DS_Store
+
 # Allow frontend lib directory
 !frontend/lib/
 !frontend/lib/**
