@@ -680,12 +680,16 @@ export default function HomePage() {
             Curated picks for the indecisive eater.
           </p>
           {selectedCampus ? (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--text)]">
+            <button
+              type="button"
+              onClick={() => setCampusPickerOpen(true)}
+              className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--surface-2)]"
+            >
               <span className="material-symbols-outlined text-[16px] text-[var(--primary)]">
                 school
               </span>
               Campus: {selectedCampus.short_name ?? selectedCampus.name}
-            </div>
+            </button>
           ) : null}
         </div>
 
@@ -871,15 +875,15 @@ export default function HomePage() {
             <span className="text-[11px] font-medium">Saved</span>
           </Link>
           <Link
-            href="/info"
+            href="/close"
             className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
           >
             <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
               <span className="material-symbols-outlined text-[26px]">
-                info
+                near_me
               </span>
             </div>
-            <span className="text-[11px] font-medium">Info</span>
+            <span className="text-[11px] font-medium">Close</span>
           </Link>
         </div>
       </nav>

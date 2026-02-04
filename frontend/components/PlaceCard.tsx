@@ -34,6 +34,7 @@ type PlaceCardProps = {
   onCooldownClick?: () => void;
   rank?: number;
   size?: "hero" | "stacked" | "compact";
+  showDistanceBubble?: boolean;
   onSelect: (place: Place) => void;
   onVote?: (place: Place, vote: VoteValue) => void;
 };
@@ -49,6 +50,7 @@ export default function PlaceCard({
   onCooldownClick,
   rank,
   size = "compact",
+  showDistanceBubble = false,
   onSelect,
   onVote,
 }: PlaceCardProps) {
@@ -86,6 +88,10 @@ export default function PlaceCard({
       : null;
   const scoreLabel =
     typeof derivedScore === "number" ? derivedScore.toFixed(1) : null;
+  const distanceLabel =
+    typeof place.distance_miles === "number" && !Number.isNaN(place.distance_miles)
+      ? `${place.distance_miles < 10 ? place.distance_miles.toFixed(1) : place.distance_miles.toFixed(0)} mi`
+      : null;
 
   const layout = size === "hero" ? "p-5" : size === "stacked" ? "p-4" : "p-4";
 
@@ -156,6 +162,24 @@ export default function PlaceCard({
                 >
                   Score
                 </span>
+                {showDistanceBubble && distanceLabel ? (
+                  <div
+                    className={`mt-1 flex items-center rounded-full border border-[var(--border)] bg-[var(--surface-2)] ${
+                      size === "hero"
+                        ? "px-2.5 py-0.5 text-[11px]"
+                        : "px-2 py-0.5 text-[10px]"
+                    } font-semibold text-[var(--text-muted)]`}
+                  >
+                    <span
+                      className={`material-symbols-outlined ${
+                        size === "hero" ? "text-[14px]" : "text-[12px]"
+                      }`}
+                    >
+                      near_me
+                    </span>
+                    <span className="ml-1">{distanceLabel}</span>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
