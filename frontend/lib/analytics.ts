@@ -8,7 +8,8 @@ export type AnalyticsEvent =
   | "place_open_modal"
   | "vote_cast"
   | "shuffle_click"
-  | "open_in_maps";
+  | "open_in_maps"
+  | "campus_selected";
 
 type PlaceProps = {
   place_id: string | number;
@@ -17,6 +18,7 @@ type PlaceProps = {
   tags?: string[];
   price_tier?: number | string | null;
   distance_miles?: number | null;
+  campus_id?: number;
 };
 
 type EventPropsByName = {
@@ -29,6 +31,7 @@ type EventPropsByName = {
   };
   shuffle_click: { surface: string };
   open_in_maps: PlaceProps & { provider?: string };
+  campus_selected: { campus_id: number; campus_name?: string };
 };
 
 const isProduction = process.env.NODE_ENV === "production";
