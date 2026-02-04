@@ -34,6 +34,32 @@ function applyVoteToPlace(place: Place, response: VoteResponse) {
   };
 }
 
+function formatCategoryLabel(value?: string | number | null) {
+  if (value === null || value === undefined) return "";
+  const normalized = String(value).replace(/[_-]+/g, " ").toLowerCase();
+  return normalized
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function formatPriceTier(price?: number | string | null) {
+  if (!price) return "—";
+  if (typeof price === "number") {
+    const count = Math.min(Math.max(price, 1), 4);
+    return "$".repeat(count);
+  }
+  if (typeof price === "string" && price.trim().length > 0) {
+    const numeric = Number(price);
+    if (Number.isFinite(numeric)) {
+      const count = Math.min(Math.max(Math.round(numeric), 1), 4);
+      return "$".repeat(count);
+    }
+    return price;
+  }
+  return "—";
+}
+
 export default function ClosePage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,7 +200,16 @@ export default function ClosePage() {
       sort: "closest",
     })
       .then((data) => {
-        if (isActive) setPlaces(data);
+        if (!isActive) return;
+        const sorted = data
+          .slice()
+          .sort(
+            (a, b) =>
+              (a.distance_miles ?? Infinity) -
+                (b.distance_miles ?? Infinity) ||
+              Number(a.id) - Number(b.id)
+          );
+        setPlaces(sorted);
       })
       .catch(() => {
         if (isActive) setError("Could not load nearby places.");
@@ -452,7 +487,10 @@ export default function ClosePage() {
               <div className="space-y-6">
                 <div>
                   <p className="text-base font-medium text-[var(--text-muted)]">
-                    {voteTarget.categories?.slice(0, 3).join(" • ")}
+                    {voteTarget.categories
+                      ?.slice(0, 3)
+                      .map((value) => formatCategoryLabel(value))
+                      .join(" • ")}
                   </p>
                   {voteTarget.address ? (
                     <p className="mt-2 text-sm text-[var(--text-muted)]">
@@ -477,11 +515,7 @@ export default function ClosePage() {
                       Price
                     </p>
                     <p className="text-sm font-bold text-[var(--text)]">
-                      {typeof voteTarget.price_tier === "number"
-                        ? "$".repeat(
-                            Math.min(Math.max(voteTarget.price_tier, 1), 4)
-                          )
-                        : voteTarget.price_tier ?? "—"}
+                      {formatPriceTier(voteTarget.price_tier)}
                     </p>
                   </div>
                 </div>
