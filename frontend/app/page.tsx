@@ -917,7 +917,7 @@ export default function HomePage() {
               <div className="space-y-6">
                 <div>
                   <p className="text-base font-medium text-[var(--text-muted)]">
-                    Classic Dive & Slices in Downtown Huntsville
+                    {getCategoryChips(voteTarget, 3).join(" • ")}
                   </p>
                   {voteTarget.address ? (
                     <p className="mt-2 text-sm text-[var(--text-muted)]">
