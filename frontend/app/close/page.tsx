@@ -11,7 +11,7 @@ import Link from "next/link";
 import TopBar from "../../components/TopBar";
 import PlaceCard from "../../components/PlaceCard";
 import VoteButtons from "../../components/VoteButtons";
-import { getCampuses, getOrCreateSessionId, getPlaces, submitVote } from "../../lib/api";
+import { getCampuses, getOrCreateSessionId, getTrending, submitVote } from "../../lib/api";
 import { setAnalyticsContext, trackEvent } from "../../lib/analytics";
 import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../../lib/maps";
 import type { Campus, Place, VoteResponse, VoteValue } from "../../lib/types";
@@ -249,9 +249,10 @@ export default function ClosePage() {
 
     setLoading(true);
     setError(null);
-    getPlaces({
+    getTrending({
       campusId,
       city: selectedCampus?.city ?? "Huntsville",
+      time_window: "7d",
       limit: 20,
       sort: "closest",
     })
