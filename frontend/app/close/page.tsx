@@ -12,7 +12,7 @@ import TopBar from "../../components/TopBar";
 import PlaceCard from "../../components/PlaceCard";
 import VoteButtons from "../../components/VoteButtons";
 import { getCampuses, getOrCreateSessionId, getPlaces, submitVote } from "../../lib/api";
-import { track } from "../../lib/analytics";
+import { setAnalyticsContext, trackEvent } from "../../lib/analytics";
 import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../../lib/maps";
 import type { Campus, Place, VoteResponse, VoteValue } from "../../lib/types";
 
@@ -103,6 +103,8 @@ export default function ClosePage() {
     Record<string, { vote: VoteValue; at: number }>
   >({});
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const impressionsRef = useRef<Set<string>>(new Set());
+  const previousSortMode = useRef<"best" | "closest" | "trending" | null>(null);
 
   const COOLDOWN_MS = 24 * 60 * 60 * 1000;
   const COOLDOWN_KEY = "munch_vote_cooldowns";
@@ -112,6 +114,7 @@ export default function ClosePage() {
     () => campuses.find((campus) => campus.id === campusId) ?? null,
     [campuses, campusId]
   );
+  const sortMode: "best" | "closest" | "trending" = "closest";
 
   const formatRemaining = (ms: number) => {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -132,6 +135,32 @@ export default function ClosePage() {
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
   }, []);
+
+  useEffect(() => {
+    setAnalyticsContext({
+      campus: selectedCampus?.short_name ?? selectedCampus?.name ?? undefined,
+      campus_id: campusId ?? undefined,
+      sort_mode: sortMode,
+      category: null,
+      session_id: sessionId,
+      app_version: process.env.NEXT_PUBLIC_APP_VERSION,
+    });
+  }, [selectedCampus, campusId, sortMode, sessionId]);
+
+  useEffect(() => {
+    if (!previousSortMode.current) {
+      trackEvent("sort_mode_selected", { sort_mode: sortMode });
+      previousSortMode.current = sortMode;
+      return;
+    }
+    if (previousSortMode.current !== sortMode) {
+      trackEvent("sort_mode_selected", {
+        sort_mode: sortMode,
+        previous_sort_mode: previousSortMode.current,
+      });
+      previousSortMode.current = sortMode;
+    }
+  }, [sortMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -251,6 +280,20 @@ export default function ClosePage() {
   }, [campusId, selectedCampus?.city]);
 
   useEffect(() => {
+    places.forEach((place, index) => {
+      const id = String(place.id);
+      if (impressionsRef.current.has(id)) return;
+      if (index >= 20) return;
+      impressionsRef.current.add(id);
+      trackEvent("place_card_viewed", {
+        place_id: place.id,
+        distance_miles: place.distance_miles ?? undefined,
+        rank_position: index + 1,
+      });
+    });
+  }, [places]);
+
+  useEffect(() => {
     if (!toastTimer.current) return;
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -260,14 +303,21 @@ export default function ClosePage() {
   const handleOpenMaps = (place: Place) => {
     const query = buildMapsQuery(place.name, place.address ?? null);
     const link = getPreferredMapsLink(query);
-    track("open_in_maps", {
+    trackEvent("open_in_maps_clicked", {
       place_id: place.id,
-      place_name: place.name,
       distance_miles: place.distance_miles ?? undefined,
-      campus_id: campusId ?? undefined,
       provider: isIOS() ? "apple" : "google",
     });
     window.open(link, "_blank", "noopener,noreferrer");
+  };
+
+  const handleSelectPlace = (place: Place, rankPosition?: number) => {
+    trackEvent("place_clicked", {
+      place_id: place.id,
+      distance_miles: place.distance_miles ?? undefined,
+      rank_position: rankPosition,
+    });
+    setVoteTarget(place);
   };
 
   const handleVoteForPlace = async (
@@ -285,13 +335,10 @@ export default function ClosePage() {
         vote,
         session_id: sessionId,
       });
-      track("vote_cast", {
+      trackEvent("vote_cast", {
         place_id: place.id,
-        place_name: place.name,
         distance_miles: place.distance_miles ?? undefined,
-        campus_id: campusId ?? undefined,
-        verdict: vote,
-        surface,
+        vote,
       });
       setPlaces((prev) =>
         prev.map((item) =>
@@ -364,6 +411,9 @@ export default function ClosePage() {
                     type="button"
                     className="rounded-xl border border-[var(--border)] px-4 py-3 text-left text-sm font-medium hover:bg-[var(--surface-2)]"
                     onClick={() => {
+                      const hadCampus = !!window.localStorage.getItem(
+                        "munchhsv_campus_id"
+                      );
                       setCampusId(campus.id);
                       setCampusPickerOpen(false);
                       if (typeof window !== "undefined") {
@@ -372,6 +422,12 @@ export default function ClosePage() {
                           String(campus.id)
                         );
                       }
+                      trackEvent("campus_selected", {
+                        campus: campus.short_name ?? campus.name,
+                        campus_id: campus.id,
+                        source: hadCampus ? "settings" : "onboarding",
+                        is_first_time: !hadCampus,
+                      });
                     }}
                   >
                     {campus.short_name ?? campus.name}
@@ -439,7 +495,7 @@ export default function ClosePage() {
                     animateVote={animateVote}
                     size="stacked"
                     showDistanceBubble
-                    onSelect={(value) => setVoteTarget(value)}
+                    onSelect={(value) => handleSelectPlace(value, index + 1)}
                     onVote={(value, vote) =>
                       handleVoteForPlace(value, vote, "card")
                     }
@@ -464,6 +520,17 @@ export default function ClosePage() {
             </div>
             <span className="text-[11px] font-medium">Discover</span>
           </Link>
+          <Link
+            href="/saved"
+            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
+          >
+            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
+              <span className="material-symbols-outlined text-[26px]">
+                bookmark
+              </span>
+            </div>
+            <span className="text-[11px] font-medium">Saved</span>
+          </Link>
           <button
             type="button"
             className="group flex flex-1 flex-col items-center gap-1.5"
@@ -478,17 +545,6 @@ export default function ClosePage() {
               Close to you
             </span>
           </button>
-          <Link
-            href="/saved"
-            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
-          >
-            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
-              <span className="material-symbols-outlined text-[26px]">
-                bookmark
-              </span>
-            </div>
-            <span className="text-[11px] font-medium">Saved</span>
-          </Link>
         </div>
       </nav>
       {voteTarget ? (

@@ -14,7 +14,7 @@ import PlaceCard from "../components/PlaceCard";
 import TopBar from "../components/TopBar";
 import VoteButtons from "../components/VoteButtons";
 import { getCampuses, getOrCreateSessionId, getTrending, submitVote } from "../lib/api";
-import { track } from "../lib/analytics";
+import { setAnalyticsContext, trackEvent } from "../lib/analytics";
 import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../lib/maps";
 import type { Campus, Place, VoteResponse, VoteValue } from "../lib/types";
 
@@ -177,7 +177,8 @@ type PlaceSection = "top_3" | "more_places";
 function buildPlaceProps(
   place: Place,
   section?: PlaceSection,
-  campusId?: number | null
+  campusId?: number | null,
+  rankPosition?: number
 ) {
   const distance =
     (place as { distance_miles?: number | null }).distance_miles ?? null;
@@ -189,6 +190,7 @@ function buildPlaceProps(
     price_tier: place.price_tier ?? null,
     distance_miles: distance ?? undefined,
     campus_id: campusId ?? undefined,
+    rank_position: rankPosition,
   };
 }
 
@@ -308,6 +310,7 @@ export default function HomePage() {
   const impressionsRef = useRef<
     Record<string, { key: string; seen: Set<string> }>
   >({});
+  const previousSortMode = useRef<"best" | "closest" | "trending" | null>(null);
 
   const COOLDOWN_MS = 24 * 60 * 60 * 1000;
   const COOLDOWN_KEY = "munch_vote_cooldowns";
@@ -330,6 +333,7 @@ export default function HomePage() {
   };
 
   const [initialLoad, setInitialLoad] = useState(true);
+  const sortMode: "best" | "closest" | "trending" = "trending";
   const selectedCampus = useMemo(
     () => campuses.find((campus) => campus.id === campusId) ?? null,
     [campuses, campusId]
@@ -343,6 +347,32 @@ export default function HomePage() {
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
   }, []);
+
+  useEffect(() => {
+    setAnalyticsContext({
+      campus: selectedCampus?.short_name ?? selectedCampus?.name ?? undefined,
+      campus_id: campusId ?? undefined,
+      sort_mode: sortMode,
+      category: categoryParam ?? null,
+      session_id: sessionId,
+      app_version: process.env.NEXT_PUBLIC_APP_VERSION,
+    });
+  }, [selectedCampus, campusId, sortMode, categoryParam, sessionId]);
+
+  useEffect(() => {
+    if (!previousSortMode.current) {
+      trackEvent("sort_mode_selected", { sort_mode: sortMode });
+      previousSortMode.current = sortMode;
+      return;
+    }
+    if (previousSortMode.current !== sortMode) {
+      trackEvent("sort_mode_selected", {
+        sort_mode: sortMode,
+        previous_sort_mode: previousSortMode.current,
+      });
+      previousSortMode.current = sortMode;
+    }
+  }, [sortMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -442,7 +472,7 @@ export default function HomePage() {
       category: categoryParam,
       time_window: "7d",
       limit: 20,
-      sort: "trending",
+      sort: sortMode,
     })
       .then((data) => {
         if (isActive) setPlaces(data);
@@ -479,7 +509,7 @@ export default function HomePage() {
   const handleOpenMaps = (place: Place) => {
     const query = buildMapsQuery(place.name, place.address ?? null);
     const link = getPreferredMapsLink(query);
-    track("open_in_maps", {
+    trackEvent("open_in_maps_clicked", {
       ...buildPlaceProps(place, undefined, campusId),
       provider: isIOS() ? "apple" : "google",
     });
@@ -487,11 +517,12 @@ export default function HomePage() {
   };
 
   const handleSelectPlace = (place: Place, rankPosition?: number) => {
-    track("place_open_modal", {
+    trackEvent("place_clicked", {
       ...buildPlaceProps(
         place,
         rankPosition && rankPosition <= 3 ? "top_3" : "more_places",
-        campusId
+        campusId,
+        rankPosition
       ),
     });
     setVoteTarget(place);
@@ -518,10 +549,9 @@ export default function HomePage() {
         vote,
         session_id: sessionId,
       });
-      track("vote_cast", {
+      trackEvent("vote_cast", {
         ...buildPlaceProps(place, undefined, campusId),
-        verdict: vote,
-        surface,
+        vote,
       });
       setPlaces((prev) =>
         prev.map((item) =>
@@ -571,7 +601,7 @@ export default function HomePage() {
       category: categoryParam,
       time_window: "7d",
       limit: 40,
-      sort: "trending",
+      sort: sortMode,
     })
       .then((data) => {
         const pool = data.filter(
@@ -587,12 +617,19 @@ export default function HomePage() {
             : prev
         );
       });
-    track("shuffle_click", { surface: "discover" });
+    trackEvent("shuffle_click", { surface: "discover" });
   };
 
   const handleSelectCategory = (category: string) => {
+    const previous = categoryParam ?? null;
     setInitialLoad(false);
     setSelectedCategory(category);
+    const next = CATEGORY_TO_API[category] ?? null;
+    trackEvent("category_selected", {
+      category: next,
+      previous_category: previous,
+      sort_mode: sortMode,
+    });
   };
 
   const handleSheetTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -636,7 +673,12 @@ export default function HomePage() {
         const id = String(place.id);
         if (state.seen.has(id)) return;
         state.seen.add(id);
-        track("places_impression", buildPlaceProps(place, section, campusId));
+        const index = list.findIndex((item) => item.id === place.id);
+        const rankPosition = section === "top_3" ? index + 1 : index + 4;
+        trackEvent(
+          "place_card_viewed",
+          buildPlaceProps(place, section, campusId, rankPosition)
+        );
       });
     };
 
@@ -685,6 +727,9 @@ export default function HomePage() {
                     type="button"
                     className="rounded-xl border border-[var(--border)] px-4 py-3 text-left text-sm font-medium hover:bg-[var(--surface-2)]"
                     onClick={() => {
+                      const hadCampus = !!window.localStorage.getItem(
+                        "munchhsv_campus_id"
+                      );
                       setCampusId(campus.id);
                       setCampusPickerOpen(false);
                       if (typeof window !== "undefined") {
@@ -693,9 +738,11 @@ export default function HomePage() {
                           String(campus.id)
                         );
                       }
-                      track("campus_selected", {
+                      trackEvent("campus_selected", {
+                        campus: campus.short_name ?? campus.name,
                         campus_id: campus.id,
-                        campus_name: campus.name,
+                        source: hadCampus ? "settings" : "onboarding",
+                        is_first_time: !hadCampus,
                       });
                     }}
                   >
@@ -907,17 +954,6 @@ export default function HomePage() {
             </span>
           </button>
           <Link
-            href="/saved"
-            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
-          >
-            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
-              <span className="material-symbols-outlined text-[26px]">
-                bookmark
-              </span>
-            </div>
-            <span className="text-[11px] font-medium">Saved</span>
-          </Link>
-          <Link
             href="/close"
             className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
           >
@@ -927,6 +963,17 @@ export default function HomePage() {
               </span>
             </div>
             <span className="text-[11px] font-medium">Close to you</span>
+          </Link>
+          <Link
+            href="/saved"
+            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
+          >
+            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
+              <span className="material-symbols-outlined text-[26px]">
+                bookmark
+              </span>
+            </div>
+            <span className="text-[11px] font-medium">Saved</span>
           </Link>
         </div>
       </nav>

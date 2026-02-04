@@ -4,55 +4,85 @@ import posthog from "posthog-js";
 
 export type AnalyticsEvent =
   | "page_view"
-  | "places_impression"
-  | "place_open_modal"
+  | "place_card_viewed"
+  | "place_clicked"
   | "vote_cast"
+  | "category_selected"
+  | "sort_mode_selected"
   | "shuffle_click"
-  | "open_in_maps"
+  | "open_in_maps_clicked"
   | "campus_selected";
+
+export type AnalyticsContext = {
+  campus?: string;
+  campus_id?: number;
+  sort_mode?: "best" | "closest" | "trending";
+  category?: string | null;
+  session_id?: string | null;
+  app_version?: string | null;
+};
 
 type PlaceProps = {
   place_id: string | number;
-  place_name?: string;
-  section?: "top_3" | "more_places";
-  tags?: string[];
-  price_tier?: number | string | null;
   distance_miles?: number | null;
-  campus_id?: number;
+  rank_position?: number;
 };
 
 type EventPropsByName = {
   page_view: { pathname: string; url: string };
-  places_impression: PlaceProps;
-  place_open_modal: PlaceProps;
+  place_card_viewed: PlaceProps;
+  place_clicked: PlaceProps;
   vote_cast: PlaceProps & {
-    verdict: "worth_it" | "mid" | "skip";
-    surface: "card" | "modal";
+    vote: "worth_it" | "mid" | "skip";
+  };
+  category_selected: {
+    category: string | null;
+    previous_category?: string | null;
+    sort_mode: "best" | "closest" | "trending";
+  };
+  sort_mode_selected: {
+    sort_mode: "best" | "closest" | "trending";
+    previous_sort_mode?: "best" | "closest" | "trending";
   };
   shuffle_click: { surface: string };
-  open_in_maps: PlaceProps & { provider?: string };
-  campus_selected: { campus_id: number; campus_name?: string };
+  open_in_maps_clicked: PlaceProps & { provider?: string };
+  campus_selected: {
+    campus: string;
+    campus_id?: number;
+    source: "onboarding" | "settings" | "prompt";
+    is_first_time: boolean;
+  };
 };
 
 const isProduction = process.env.NODE_ENV === "production";
+let analyticsContext: AnalyticsContext = {};
 
-export function track<EventName extends AnalyticsEvent>(
+export function setAnalyticsContext(update: Partial<AnalyticsContext>) {
+  analyticsContext = { ...analyticsContext, ...update };
+}
+
+export function getAnalyticsContext() {
+  return analyticsContext;
+}
+
+export function trackEvent<EventName extends AnalyticsEvent>(
   event: EventName,
   props?: EventPropsByName[EventName]
 ) {
   try {
+    const payload = { ...analyticsContext, ...(props ?? {}) };
     if (!isProduction) {
       // Avoid polluting PostHog with local dev events.
       // eslint-disable-next-line no-console
-      console.info(`[analytics] ${event}`, props ?? {});
+      console.info(`[analytics] ${event}`, payload);
       return;
     }
-    posthog.capture(event, props ?? {});
+    posthog.capture(event, payload);
   } catch {
     // Analytics should never break the app.
   }
 }
 
 export function trackPageView(pathname: string, url: string) {
-  track("page_view", { pathname, url });
+  trackEvent("page_view", { pathname, url });
 }
