@@ -84,8 +84,11 @@ class PlaceOut(BaseModel):
     name: str
     address: str
     city: str
-    category: list[str]
+    categories: list[str]
+    category: Optional[list[str]] = None
     price_tier: Optional[str] = None
+    distance_miles: float
+    score: float
 
     class Config:
         from_attributes = True

@@ -55,12 +55,12 @@ def seed_votes(place_ids: list[int], total_votes: int, days_back: int, batch_siz
     return inserted
 
 
-def measure_ranking(iterations: int, time_window: str, limit: int) -> dict:
+def measure_ranking(iterations: int, time_window: str, limit: int, campus_id: int) -> dict:
     durations = []
     window = parse_time_window(time_window)
     range_end = datetime.now(timezone.utc)
     range_start = range_end - window
-    places = fetch_places(limit=limit)
+    places = fetch_places(campus_id=campus_id, limit=limit)
     place_ids = [place["id"] for place in places]
 
     for _ in range(iterations):
@@ -87,9 +87,10 @@ def main() -> None:
     parser.add_argument("--rank-iterations", type=int, default=30)
     parser.add_argument("--rank-limit", type=int, default=12)
     parser.add_argument("--time-window", type=str, default="7d")
+    parser.add_argument("--campus-id", type=int, default=1)
     args = parser.parse_args()
 
-    places = fetch_places(limit=25)
+    places = fetch_places(campus_id=args.campus_id, limit=25)
     place_ids = [place["id"] for place in places]
     if not place_ids:
         raise SystemExit("No places found to seed votes against.")
@@ -97,7 +98,7 @@ def main() -> None:
     inserted = seed_votes(place_ids, args.votes, args.days_back, args.batch_size)
     print(f"Seeded votes: {inserted}")
 
-    stats = measure_ranking(args.rank_iterations, args.time_window, args.rank_limit)
+    stats = measure_ranking(args.rank_iterations, args.time_window, args.rank_limit, args.campus_id)
     print(
         "Ranking timing (ms): "
         f"avg={stats['avg_ms']:.2f} p95={stats['p95_ms']:.2f} "

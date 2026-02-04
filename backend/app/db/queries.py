@@ -10,28 +10,51 @@ def get_current_date_time():
     return current_dt
 
 # Places Queries
-def fetch_places(category: str | None = None, limit: int = 25, city: str = "Huntsville"):
+def _attach_distance(place: dict) -> dict:
+    distances = place.pop("place_distances", None) or []
+    if not distances or distances[0].get("distance_miles") is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Missing distance_miles for place/campus"
+        )
+    distance_miles = distances[0]["distance_miles"]
+    place["distance_miles"] = distance_miles
+    if "categories" not in place:
+        categories = place.get("category") or []
+        place["categories"] = categories
+    return place
+
+
+def fetch_places(
+    campus_id: int,
+    category: str | None = None,
+    limit: int = 25,
+    city: str = "Huntsville"
+):
     supabase = get_supabase()
     query = (
         supabase.table("places")
-        .select("*")
+        .select("*, place_distances!inner(distance_miles)")
         .limit(limit)
         .eq("city", str(city))
+        .eq("place_distances.campus_id", campus_id)
         )
     if category:
         query = query.contains("category", [str(category)])
     
     response = query.execute()
     
-    return response.data
+    return [_attach_distance(place) for place in response.data]
 
 # Fetch Places  By Id Query
-def fetch_places_by_id (id: int):
+def fetch_places_by_id(id: int, campus_id: int):
     supabase = get_supabase()
     query = (
         supabase.table("places")
-        .select("*")
-        .eq("id", id))
+        .select("*, place_distances!inner(distance_miles)")
+        .eq("id", id)
+        .eq("place_distances.campus_id", campus_id)
+    )
     
     response = query.execute()
     
@@ -41,7 +64,7 @@ def fetch_places_by_id (id: int):
             detail=f"Place with id {id} not found"
         )
 
-    return response.data[0]
+    return _attach_distance(response.data[0])
 
 # Votes Queries
 

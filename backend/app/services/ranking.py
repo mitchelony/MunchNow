@@ -42,10 +42,26 @@ def compute_score(worth_it: int, mid: int, skip: int) -> float:
     return score
 
 
+def distance_score(distance_miles: float, k: float = 2.5) -> float:
+    """
+    Compute a distance decay score.
+    distance_score = exp(-distance_miles / k)
+    """
+    from math import exp
+    return exp(-distance_miles / k)
+
+
+def blended_score(popularity_score: float, distance_score_value: float, weight_popularity: float, weight_distance: float) -> float:
+    """
+    Weighted blend of popularity and distance signals.
+    """
+    return (weight_popularity * popularity_score) + (weight_distance * distance_score_value)
+
+
 def rank_places(
-    places: list[dict], 
-    vote_counts: dict[int, dict], 
-    limit: int
+    places: list[dict],
+    vote_counts: dict[int, dict],
+    limit: int | None = None
 ) -> list[dict]:
     """
     Merge places with their vote counts, calculate scores, and rank them.
@@ -94,7 +110,8 @@ def rank_places(
         key=lambda x: (-x["score"], -x["total_votes"], x["name"])
     )
     
-    # Apply limit and return
+    if limit is None:
+        return ranked_places
     return ranked_places[:limit]
 
 
