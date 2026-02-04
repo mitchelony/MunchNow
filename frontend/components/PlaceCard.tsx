@@ -83,11 +83,7 @@ export default function PlaceCard({
     }[value] ?? "bg-[var(--primary-soft)] text-[var(--primary)]");
   const chipsList = chips && chips.length > 0 ? chips : [label];
   const numericScoreRaw =
-    typeof place.score === "number"
-      ? place.score
-      : typeof place.score === "string" && place.score.trim().length > 0
-      ? Number(place.score)
-      : null;
+    typeof place.score === "number" ? place.score : null;
   const numericScore =
     typeof numericScoreRaw === "number" && Number.isFinite(numericScoreRaw)
       ? numericScoreRaw
