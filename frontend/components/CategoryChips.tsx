@@ -5,11 +5,24 @@ type CategoryChipsProps = {
 };
 
 const CATEGORY_STYLES: Record<string, string> = {
-  "Quick Bites": "text-indigo-700 bg-indigo-100 border-indigo-200",
+  All: "text-slate-700 bg-slate-100 border-slate-200",
+  American: "text-red-700 bg-red-100 border-red-200",
   Cheap: "text-emerald-700 bg-emerald-100 border-emerald-200",
+  Chinese: "text-orange-700 bg-orange-100 border-orange-200",
+  Coffee: "text-amber-800 bg-amber-100 border-amber-200",
+  Dessert: "text-pink-700 bg-pink-100 border-pink-200",
+  "Fast Food": "text-yellow-700 bg-yellow-100 border-yellow-200",
+  Japanese: "text-sky-700 bg-sky-100 border-sky-200",
+  Korean: "text-violet-700 bg-violet-100 border-violet-200",
   "Late Night": "text-purple-700 bg-purple-100 border-purple-200",
-  "Coffee Spots": "text-yellow-700 bg-yellow-100 border-yellow-200",
   "Local Favorite": "text-blue-700 bg-blue-100 border-blue-200",
+  Mediterranean: "text-teal-700 bg-teal-100 border-teal-200",
+  Mexican: "text-green-700 bg-green-100 border-green-200",
+  "Middle Eastern": "text-rose-700 bg-rose-100 border-rose-200",
+  Pizza: "text-rose-700 bg-rose-100 border-rose-200",
+  "Sit Down": "text-slate-700 bg-slate-100 border-slate-200",
+  Thai: "text-cyan-700 bg-cyan-100 border-cyan-200",
+  Vietnamese: "text-lime-700 bg-lime-100 border-lime-200",
 };
 
 export default function CategoryChips({
@@ -24,14 +37,7 @@ export default function CategoryChips({
         const colorClass =
           CATEGORY_STYLES[category] ??
           "text-[var(--primary)] bg-[var(--primary-soft)] border-[var(--primary)]/20";
-        const activeClass =
-          {
-            "Quick Bites": "bg-indigo-100 text-indigo-700 border-indigo-200",
-            Cheap: "bg-emerald-100 text-emerald-700 border-emerald-200",
-            "Late Night": "bg-purple-100 text-purple-700 border-purple-200",
-            "Coffee Spots": "bg-yellow-100 text-yellow-700 border-yellow-200",
-            "Local Favorite": "bg-blue-100 text-blue-700 border-blue-200",
-          }[category] ?? "bg-[var(--primary-soft)] text-[var(--primary)] border-[var(--primary)]/20";
+        const activeClass = colorClass;
         return (
           <button
             key={category}

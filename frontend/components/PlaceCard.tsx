@@ -8,6 +8,11 @@ function formatPriceTier(price?: number | string | null) {
     return "$".repeat(count);
   }
   if (typeof price === "string" && price.trim().length > 0) {
+    const numeric = Number(price);
+    if (Number.isFinite(numeric)) {
+      const count = Math.min(Math.max(Math.round(numeric), 1), 4);
+      return "$".repeat(count);
+    }
     return price;
   }
   return null;
@@ -53,11 +58,24 @@ export default function PlaceCard({
   const summary = place.address ?? "Tap to see why locals love it.";
   const chipClass = (value: string) =>
     ({
-      "Quick Bites": "bg-indigo-100 text-indigo-700",
+      All: "bg-slate-100 text-slate-700",
+      American: "bg-red-100 text-red-700",
       Cheap: "bg-emerald-100 text-emerald-700",
+      Chinese: "bg-orange-100 text-orange-700",
+      Coffee: "bg-amber-100 text-amber-800",
+      Dessert: "bg-pink-100 text-pink-700",
+      "Fast Food": "bg-yellow-100 text-yellow-700",
+      Japanese: "bg-sky-100 text-sky-700",
+      Korean: "bg-violet-100 text-violet-700",
       "Late Night": "bg-purple-100 text-purple-700",
-      "Coffee Spots": "bg-yellow-100 text-yellow-700",
       "Local Favorite": "bg-blue-100 text-blue-700",
+      Mediterranean: "bg-teal-100 text-teal-700",
+      Mexican: "bg-green-100 text-green-700",
+      "Middle Eastern": "bg-rose-100 text-rose-700",
+      Pizza: "bg-rose-100 text-rose-700",
+      "Sit Down": "bg-slate-100 text-slate-700",
+      Thai: "bg-cyan-100 text-cyan-700",
+      Vietnamese: "bg-lime-100 text-lime-700",
     }[value] ?? "bg-[var(--primary-soft)] text-[var(--primary)]");
   const chipsList = chips && chips.length > 0 ? chips : [label];
   const derivedScore =
@@ -187,7 +205,7 @@ export default function PlaceCard({
             event.stopPropagation();
             onCooldownClick?.();
           }}
-          className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]"
+          className="flex min-h-[58px] items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]"
         >
           Next vote in {cooldownLabel}
         </button>

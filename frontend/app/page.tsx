@@ -19,48 +19,138 @@ import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../lib/maps";
 import type { Campus, Place, VoteResponse, VoteValue } from "../lib/types";
 
 const CATEGORIES = [
-  "Quick Bites",
+  "All",
+  "American",
   "Cheap",
+  "Chinese",
+  "Coffee",
+  "Dessert",
+  "Fast Food",
+  "Japanese",
+  "Korean",
   "Late Night",
-  "Coffee Spots",
   "Local Favorite",
+  "Mediterranean",
+  "Mexican",
+  "Middle Eastern",
+  "Pizza",
+  "Sit Down",
+  "Thai",
+  "Vietnamese",
 ];
 
 const FALLBACK_CATEGORY = "Local Favorite";
 const CATEGORY_TO_API: Record<string, string> = {
-  "Quick Bites": "quick_bites",
+  American: "american",
   Cheap: "cheap",
+  Chinese: "chinese",
+  Coffee: "coffee",
+  Dessert: "dessert",
+  "Fast Food": "fast_food",
+  Japanese: "japanese",
+  Korean: "korean",
   "Late Night": "late_night",
-  "Coffee Spots": "coffee_spots",
   "Local Favorite": "local_favorite",
+  Mediterranean: "mediterranean",
+  Mexican: "mexican",
+  "Middle Eastern": "middle_eastern",
+  Pizza: "pizza",
+  "Sit Down": "sit_down",
+  Thai: "thai",
+  Vietnamese: "vietnamese",
 };
 
 const CATEGORY_THEME: Record<string, { primary: string; dark: string; soft: string }> =
   {
-    "Quick Bites": {
-      primary: "#6366f1",
-      dark: "#4f46e5",
-      soft: "rgba(99, 102, 241, 0.16)",
+    All: {
+      primary: "#64748b",
+      dark: "#475569",
+      soft: "rgba(100, 116, 139, 0.18)",
+    },
+    American: {
+      primary: "#ef4444",
+      dark: "#dc2626",
+      soft: "rgba(239, 68, 68, 0.16)",
     },
     Cheap: {
-      primary: "#16a34a",
-      dark: "#15803d",
-      soft: "rgba(22, 163, 74, 0.16)",
+      primary: "#10b981",
+      dark: "#059669",
+      soft: "rgba(16, 185, 129, 0.16)",
     },
-    "Late Night": {
+    Chinese: {
+      primary: "#f97316",
+      dark: "#ea580c",
+      soft: "rgba(249, 115, 22, 0.16)",
+    },
+    Coffee: {
+      primary: "#a16207",
+      dark: "#854d0e",
+      soft: "rgba(161, 98, 7, 0.18)",
+    },
+    Dessert: {
+      primary: "#ec4899",
+      dark: "#db2777",
+      soft: "rgba(236, 72, 153, 0.16)",
+    },
+    "Fast Food": {
+      primary: "#f59e0b",
+      dark: "#d97706",
+      soft: "rgba(245, 158, 11, 0.16)",
+    },
+    Japanese: {
+      primary: "#0ea5e9",
+      dark: "#0284c7",
+      soft: "rgba(14, 165, 233, 0.16)",
+    },
+    Korean: {
       primary: "#7c3aed",
       dark: "#6d28d9",
       soft: "rgba(124, 58, 237, 0.16)",
     },
-    "Coffee Spots": {
-      primary: "#eab308",
-      dark: "#ca8a04",
-      soft: "rgba(234, 179, 8, 0.18)",
+    "Late Night": {
+      primary: "#8b5cf6",
+      dark: "#7c3aed",
+      soft: "rgba(139, 92, 246, 0.16)",
     },
     "Local Favorite": {
       primary: "#3b82f6",
       dark: "#2563eb",
       soft: "rgba(59, 130, 246, 0.16)",
+    },
+    Mediterranean: {
+      primary: "#14b8a6",
+      dark: "#0d9488",
+      soft: "rgba(20, 184, 166, 0.16)",
+    },
+    Mexican: {
+      primary: "#22c55e",
+      dark: "#16a34a",
+      soft: "rgba(34, 197, 94, 0.16)",
+    },
+    "Middle Eastern": {
+      primary: "#f472b6",
+      dark: "#ec4899",
+      soft: "rgba(244, 114, 182, 0.16)",
+    },
+    Pizza: {
+      primary: "#fb7185",
+      dark: "#f43f5e",
+      soft: "rgba(251, 113, 133, 0.16)",
+    },
+    "Sit Down": {
+      primary: "#64748b",
+      dark: "#475569",
+      soft: "rgba(100, 116, 139, 0.18)",
+    },
+    Thai: {
+      primary: "#06b6d4",
+      dark: "#0891b2",
+      soft: "rgba(6, 182, 212, 0.16)",
+    },
+    Vietnamese: {
+      primary: "#84cc16",
+      dark: "#65a30d",
+      soft: "rgba(132, 204, 22, 0.16)",
     },
   };
 
@@ -142,6 +232,12 @@ function computeVoteCounts(place: Place) {
   return { worth, mid, skip, total };
 }
 
+function formatDistanceMiles(distance?: number | null) {
+  if (typeof distance !== "number" || Number.isNaN(distance)) return "—";
+  const rounded = distance < 10 ? distance.toFixed(1) : distance.toFixed(0);
+  return `${rounded} mi`;
+}
+
 function buildStatus(place: Place) {
   if (place.score_hint) return place.score_hint;
   const votes = computeVoteCounts(place);
@@ -169,7 +265,7 @@ function shufflePlaces(items: Place[]) {
 
 export default function HomePage() {
   const [places, setPlaces] = useState<Place[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("Quick Bites");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -583,6 +679,14 @@ export default function HomePage() {
           <p className="mt-2 text-[15px] font-medium text-[var(--text-muted)]">
             Curated picks for the indecisive eater.
           </p>
+          {selectedCampus ? (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--text)]">
+              <span className="material-symbols-outlined text-[16px] text-[var(--primary)]">
+                school
+              </span>
+              Campus: {selectedCampus.short_name ?? selectedCampus.name}
+            </div>
+          ) : null}
         </div>
 
         <div className="sticky top-[96px] z-20 w-full">
@@ -820,21 +924,16 @@ export default function HomePage() {
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
                     <p className="text-xs font-semibold text-[var(--text-muted)]">
-                      Distance
+                      Distance from campus
                     </p>
                     <p className="text-sm font-bold text-[var(--text)]">
-                      1.2 mi
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
-                    <p className="text-xs font-semibold text-[var(--text-muted)]">
-                      Hours
-                    </p>
-                    <p className="text-sm font-bold text-[var(--text)]">
-                      Until 2 AM
+                      {formatDistanceMiles(
+                        (voteTarget as { distance_miles?: number | null })
+                          .distance_miles ?? null
+                      )}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
@@ -906,7 +1005,7 @@ export default function HomePage() {
                       now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
                         FEEDBACK_WINDOW_MS
                     ) ? (
-                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+                      <div className="flex min-h-[58px] items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
                         Next vote in {formatRemaining(
                           getCooldownRemaining(voteTarget.id)
                         )}
