@@ -3,8 +3,8 @@ from dotenv import load_dotenv  # type: ignore
 # Load environment variables early, before importing any modules that depend on them.
 load_dotenv()
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI #type: ignore
+from fastapi.middleware.cors import CORSMiddleware #type: ignore
 
 from app.api.routes import trending, health, votes, places, campuses
 
