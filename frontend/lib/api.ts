@@ -1,12 +1,23 @@
 import type { Place, PlaceId, VoteValue } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+const DEFAULT_CAMPUS_ID = Number(process.env.NEXT_PUBLIC_CAMPUS_ID ?? "");
+
+function resolveCampusId(explicit?: number) {
+  const campusId = explicit ?? DEFAULT_CAMPUS_ID;
+  if (!Number.isFinite(campusId) || campusId <= 0) {
+    throw new Error("NEXT_PUBLIC_CAMPUS_ID is not set or invalid");
+  }
+  return campusId;
+}
 
 type TrendingParams = {
   city: string;
   category?: string;
   time_window: string;
   limit?: number;
+  sort?: "best" | "closest" | "trending";
+  campusId?: number;
 };
 
 type VotePayload = {
@@ -44,10 +55,12 @@ function normalizePlaces(data: unknown): Place[] {
 
 export async function getTrending(params: TrendingParams): Promise<Place[]> {
   const url = buildUrl("/trending", {
+    campus_id: resolveCampusId(params.campusId),
     city: params.city,
     category: params.category,
     time_window: params.time_window,
     limit: params.limit,
+    sort: params.sort,
   });
 
   const res = await fetch(url, { method: "GET" });
@@ -62,11 +75,15 @@ export async function getPlaces(params: {
   city: string;
   category?: string;
   limit?: number;
+  sort?: "best" | "closest" | "trending";
+  campusId?: number;
 }): Promise<Place[]> {
   const url = buildUrl("/places", {
+    campus_id: resolveCampusId(params.campusId),
     city: params.city,
     category: params.category,
     limit: params.limit,
+    sort: params.sort,
   });
 
   const res = await fetch(url, { method: "GET" });

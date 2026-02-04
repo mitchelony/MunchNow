@@ -6,12 +6,13 @@ export type Place = {
   id: PlaceId;
   name: string;
   category?: string;
-  categories?: string[];
+  categories: string[];
   price_tier?: number | string | null;
   address?: string | null;
   score_hint?: string | null;
   city?: string | null;
-  score?: number | null;
+  score: number;
+  distance_miles: number;
   worth_it_count?: number | null;
   mid_count?: number | null;
   skip_count?: number | null;

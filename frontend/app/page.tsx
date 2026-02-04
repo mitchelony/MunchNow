@@ -271,6 +271,7 @@ export default function HomePage() {
       category: categoryParam,
       time_window: "7d",
       limit: 10,
+      sort: "trending",
     })
       .then((data) => {
         if (isActive) setPlaces(data);
