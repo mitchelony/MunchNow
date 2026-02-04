@@ -43,14 +43,33 @@ function buildUrl(path: string, params?: Record<string, string | number | undefi
 
 function normalizePlaces(data: unknown): Place[] {
   if (Array.isArray(data)) {
-    return data as Place[];
+    return assertPlacesShape(data as Place[]);
   }
   if (data && typeof data === "object") {
     const obj = data as Record<string, unknown>;
-    if (Array.isArray(obj.places)) return obj.places as Place[];
-    if (Array.isArray(obj.results)) return obj.results as Place[];
+    if (Array.isArray(obj.places)) return assertPlacesShape(obj.places as Place[]);
+    if (Array.isArray(obj.results)) return assertPlacesShape(obj.results as Place[]);
   }
   return [];
+}
+
+function assertPlacesShape(places: Place[]): Place[] {
+  if (process.env.NODE_ENV === "production") return places;
+  for (const place of places) {
+    if (!place) {
+      throw new Error("Invalid place payload: empty item");
+    }
+    if (!Array.isArray(place.categories)) {
+      throw new Error(`Invalid place payload: categories missing for place ${String(place.id)}`);
+    }
+    if (typeof place.distance_miles !== "number") {
+      throw new Error(`Invalid place payload: distance_miles missing for place ${String(place.id)}`);
+    }
+    if (typeof place.score !== "number") {
+      throw new Error(`Invalid place payload: score missing for place ${String(place.id)}`);
+    }
+  }
+  return places;
 }
 
 export async function getTrending(params: TrendingParams): Promise<Place[]> {
