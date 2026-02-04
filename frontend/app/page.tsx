@@ -154,8 +154,10 @@ const CATEGORY_THEME: Record<string, { primary: string; dark: string; soft: stri
     },
   };
 
+const UNCATEGORIZED_LABEL = "Uncategorized";
+
 function formatCategoryLabel(value?: string | number | null) {
-  if (value === null || value === undefined) return FALLBACK_CATEGORY;
+  if (value === null || value === undefined) return "";
   const normalized = String(value).replace(/[_-]+/g, " ").toLowerCase();
   return normalized
     .split(" ")
@@ -165,7 +167,9 @@ function formatCategoryLabel(value?: string | number | null) {
 
 function pickCategory(place: Place) {
   const fromArray = place.categories?.[0];
-  return formatCategoryLabel(fromArray ?? place.category ?? FALLBACK_CATEGORY);
+  const candidate = fromArray ?? place.category ?? null;
+  const label = formatCategoryLabel(candidate);
+  return label || UNCATEGORIZED_LABEL;
 }
 
 type PlaceSection = "top_3" | "more_places";
@@ -220,7 +224,7 @@ function getCategoryChips(place: Place, max: number) {
       });
     }
   }
-  if (chips.size === 0) chips.add(FALLBACK_CATEGORY);
+  if (chips.size === 0) chips.add(UNCATEGORIZED_LABEL);
   return Array.from(chips).slice(0, max);
 }
 
@@ -236,6 +240,23 @@ function formatDistanceMiles(distance?: number | null) {
   if (typeof distance !== "number" || Number.isNaN(distance)) return "—";
   const rounded = distance < 10 ? distance.toFixed(1) : distance.toFixed(0);
   return `${rounded} mi`;
+}
+
+function formatPriceTier(price?: number | string | null) {
+  if (!price) return "—";
+  if (typeof price === "number") {
+    const count = Math.min(Math.max(price, 1), 4);
+    return "$".repeat(count);
+  }
+  if (typeof price === "string" && price.trim().length > 0) {
+    const numeric = Number(price);
+    if (Number.isFinite(numeric)) {
+      const count = Math.min(Math.max(Math.round(numeric), 1), 4);
+      return "$".repeat(count);
+    }
+    return price;
+  }
+  return "—";
 }
 
 function buildStatus(place: Place) {
@@ -902,7 +923,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  {pickCategory(voteTarget)}
+                  {selectedCampus?.short_name ?? selectedCampus?.name ?? "Campus"}
                 </p>
                 <h3 className="text-2xl font-semibold text-[var(--text)]">
                   {voteTarget.name}
@@ -921,7 +942,10 @@ export default function HomePage() {
               <div className="space-y-6">
                 <div>
                   <p className="text-base font-medium text-[var(--text-muted)]">
-                    {getCategoryChips(voteTarget, 3).join(" • ")}
+                    {voteTarget.categories
+                      ?.slice(0, 3)
+                      .map((value) => formatCategoryLabel(value))
+                      .join(" • ")}
                   </p>
                   {voteTarget.address ? (
                     <p className="mt-2 text-sm text-[var(--text-muted)]">
@@ -936,17 +960,16 @@ export default function HomePage() {
                       Distance from campus
                     </p>
                     <p className="text-sm font-bold text-[var(--text)]">
-                      {formatDistanceMiles(
-                        (voteTarget as { distance_miles?: number | null })
-                          .distance_miles ?? null
-                      )}
+                      {formatDistanceMiles(voteTarget.distance_miles ?? null)}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
                     <p className="text-xs font-semibold text-[var(--text-muted)]">
                       Price
                     </p>
-                    <p className="text-sm font-bold text-[var(--text)]">$$</p>
+                    <p className="text-sm font-bold text-[var(--text)]">
+                      {formatPriceTier(voteTarget.price_tier)}
+                    </p>
                   </div>
                 </div>
 
@@ -956,84 +979,71 @@ export default function HomePage() {
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-lg font-bold text-[var(--text)]">
-                        Verdict
+                      <h4 className="text-base font-semibold text-[var(--text)]">
+                        Votes
                       </h4>
                       <p className="text-sm text-[var(--text-muted)]">
-                        {computeVoteCounts(voteTarget).total} student votes
+                        {computeVoteCounts(voteTarget).total} total
                       </p>
                     </div>
-                    <div className="flex -space-x-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 ring-2 ring-[var(--surface-2)]">
-                        JD
-                      </div>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 ring-2 ring-[var(--surface-2)]">
-                        MK
-                      </div>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-xs font-bold text-[var(--text-muted)] ring-2 ring-[var(--surface-2)]">
-                        +
-                      </div>
-                    </div>
                   </div>
-
-                  <div className="mt-4 flex items-center gap-4 text-sm font-semibold text-[var(--text-muted)]">
+                  <div className="mt-3 flex items-center gap-4 text-sm font-semibold text-[var(--text-muted)]">
                     <span className="inline-flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center text-[var(--success)]">
-                        <span className="material-symbols-outlined text-[18px]">
+                      <span className="flex h-7 w-7 items-center justify-center text-[var(--success)]">
+                        <span className="material-symbols-outlined text-[16px]">
                           thumb_up
                         </span>
                       </span>
                       {computeVoteCounts(voteTarget).worth}
                     </span>
                     <span className="inline-flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center text-[var(--warning)]">
-                        <span className="material-symbols-outlined text-[18px]">
+                      <span className="flex h-7 w-7 items-center justify-center text-[var(--warning)]">
+                        <span className="material-symbols-outlined text-[16px]">
                           sentiment_neutral
                         </span>
                       </span>
                       {computeVoteCounts(voteTarget).mid}
                     </span>
                     <span className="inline-flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center text-[var(--danger)]">
-                        <span className="material-symbols-outlined text-[18px]">
+                      <span className="flex h-7 w-7 items-center justify-center text-[var(--danger)]">
+                        <span className="material-symbols-outlined text-[16px]">
                           thumb_down
                         </span>
                       </span>
                       {computeVoteCounts(voteTarget).skip}
                     </span>
                   </div>
-
-                  <div className="mt-4">
-                    {voteTarget &&
-                    getCooldownRemaining(voteTarget.id) > 0 &&
-                    !(
-                      voteFeedback[String(voteTarget.id)] &&
-                      now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
-                        FEEDBACK_WINDOW_MS
-                    ) ? (
-                      <div className="flex min-h-[58px] items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
-                        Next vote in {formatRemaining(
-                          getCooldownRemaining(voteTarget.id)
-                        )}
-                      </div>
-                    ) : (
-                      <VoteButtons
-                        onVote={handleVote}
-                        isSubmitting={voteSubmitting}
-                        activeVote={
-                          voteTarget
-                            ? voteFeedback[String(voteTarget.id)]?.vote ?? null
-                            : null
-                        }
-                        animateVote={
-                          voteTarget
-                            ? now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
-                              FEEDBACK_WINDOW_MS
-                            : false
-                        }
-                      />
-                    )}
-                  </div>
+                </div>
+                <div className="mt-4">
+                  {voteTarget &&
+                  getCooldownRemaining(voteTarget.id) > 0 &&
+                  !(
+                    voteFeedback[String(voteTarget.id)] &&
+                    now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
+                      FEEDBACK_WINDOW_MS
+                  ) ? (
+                    <div className="flex min-h-[58px] items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+                      Next vote in {formatRemaining(
+                        getCooldownRemaining(voteTarget.id)
+                      )}
+                    </div>
+                  ) : (
+                    <VoteButtons
+                      onVote={handleVote}
+                      isSubmitting={voteSubmitting}
+                      activeVote={
+                        voteTarget
+                          ? voteFeedback[String(voteTarget.id)]?.vote ?? null
+                          : null
+                      }
+                      animateVote={
+                        voteTarget
+                          ? now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
+                            FEEDBACK_WINDOW_MS
+                          : false
+                      }
+                    />
+                  )}
                 </div>
 
                 <button
