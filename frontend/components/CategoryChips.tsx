@@ -5,7 +5,7 @@ type CategoryChipsProps = {
 };
 
 const CATEGORY_STYLES: Record<string, string> = {
-  All: "text-slate-700 bg-slate-100 border-slate-200",
+  All: "text-black bg-slate-100 border-slate-300",
   American: "text-red-700 bg-red-100 border-red-200",
   Cheap: "text-emerald-700 bg-emerald-100 border-emerald-200",
   Chinese: "text-orange-700 bg-orange-100 border-orange-200",

@@ -784,8 +784,10 @@ export default function HomePage() {
                         aria-pressed={shuffleActive}
                       >
                         <span
-                          className={`material-symbols-outlined mr-2 text-lg transition-transform duration-500 ${
-                            shuffleActive ? "rotate-180" : "group-hover:rotate-180"
+                          className={`material-symbols-outlined mr-2 text-lg transition-transform duration-700 ${
+                            shuffleActive
+                              ? "rotate-[540deg]"
+                              : "group-hover:rotate-[360deg]"
                           }`}
                         >
                           shuffle
