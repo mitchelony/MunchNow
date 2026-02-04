@@ -2,6 +2,17 @@ export type VoteValue = "worth_it" | "mid" | "skip";
 
 export type PlaceId = string | number;
 
+export type VoteResponse = {
+  ok: boolean;
+  place_id: PlaceId;
+  vote: VoteValue;
+  created_at: string;
+  worth_it_count: number;
+  mid_count: number;
+  skip_count: number;
+  total_votes: number;
+};
+
 export type VoteSummary = {
   worth_it: number;
   mid: number;

@@ -16,7 +16,7 @@ import VoteButtons from "../components/VoteButtons";
 import { getOrCreateSessionId, getTrending, submitVote } from "../lib/api";
 import { track } from "../lib/analytics";
 import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../lib/maps";
-import type { Place, VoteValue } from "../lib/types";
+import type { Place, VoteResponse, VoteValue } from "../lib/types";
 
 const CATEGORIES = [
   "Quick Bites",
@@ -143,14 +143,14 @@ function buildStatus(place: Place) {
   return votes.total > 0 ? "Trending" : "Fresh";
 }
 
-function applyVoteToPlace(place: Place, vote: VoteValue) {
-  const counts = computeVoteCounts(place);
-  const next = { ...place };
-  if (vote === "worth_it") next.worth_it_count = counts.worth + 1;
-  if (vote === "mid") next.mid_count = counts.mid + 1;
-  if (vote === "skip") next.skip_count = counts.skip + 1;
-  next.total_votes = counts.total + 1;
-  return next;
+function applyVoteToPlace(place: Place, response: VoteResponse) {
+  return {
+    ...place,
+    worth_it_count: response.worth_it_count,
+    mid_count: response.mid_count,
+    skip_count: response.skip_count,
+    total_votes: response.total_votes,
+  };
 }
 
 function shufflePlaces(items: Place[]) {
@@ -341,7 +341,7 @@ export default function HomePage() {
     }
     setVoteSubmitting(true);
     try {
-      await submitVote({
+      const voteResponse = await submitVote({
         place_id: place.id,
         vote,
         session_id: sessionId,
@@ -353,11 +353,13 @@ export default function HomePage() {
       });
       setPlaces((prev) =>
         prev.map((item) =>
-          item.id === place.id ? applyVoteToPlace(item, vote) : item
+          item.id === place.id ? applyVoteToPlace(item, voteResponse) : item
         )
       );
       if (voteTarget?.id === place.id) {
-        setVoteTarget((prev) => (prev ? applyVoteToPlace(prev, vote) : prev));
+        setVoteTarget((prev) =>
+          prev ? applyVoteToPlace(prev, voteResponse) : prev
+        );
       }
       setVoteFeedback((prev) => ({
         ...prev,

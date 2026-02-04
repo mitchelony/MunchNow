@@ -1,4 +1,4 @@
-import type { Place, PlaceId, VoteValue } from "./types";
+import type { Place, PlaceId, VoteResponse, VoteValue } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
 const DEFAULT_CAMPUS_ID = Number(process.env.NEXT_PUBLIC_CAMPUS_ID ?? "");
@@ -113,7 +113,7 @@ export async function getPlaces(params: {
   return normalizePlaces(data);
 }
 
-export async function submitVote(payload: VotePayload) {
+export async function submitVote(payload: VotePayload): Promise<VoteResponse> {
   const url = buildUrl("/votes");
   const res = await fetch(url, {
     method: "POST",
@@ -129,7 +129,7 @@ export async function submitVote(payload: VotePayload) {
     throw new Error("Failed to submit vote");
   }
 
-  return res.json().catch(() => null);
+  return res.json();
 }
 
 export function getOrCreateSessionId() {

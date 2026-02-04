@@ -114,6 +114,10 @@ class VoteOut(BaseModel):
     place_id: int
     vote: VoteValue
     created_at: str
+    worth_it_count: int
+    mid_count: int
+    skip_count: int
+    total_votes: int
 
     class Config:
         from_attributes = True

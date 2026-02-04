@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Query, Path
 from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
-from app.db.queries import place_vote, fetch_votes_for_place, fetch_vote_count
+from app.db.queries import place_vote, fetch_votes_for_place, fetch_vote_count, fetch_vote_counts_grouped
+from app.services.ranking import parse_time_window
 from app.models.schemas import VoteIn, VoteOut
 
 router = APIRouter()
@@ -21,11 +22,27 @@ async def create_vote(vote_data: VoteIn):
             detail="Place not found or error while creating vote"
         )
     
+    range_end = datetime.now(ZoneInfo('UTC'))
+    range_start = range_end - parse_time_window("7d")
+    vote_counts = fetch_vote_counts_grouped(
+        range_start=range_start,
+        range_end=range_end,
+        place_ids=[vote_data.place_id]
+    )
+    counts = vote_counts.get(
+        vote_data.place_id,
+        {"worth_it": 0, "mid": 0, "skip": 0, "total": 0}
+    )
+
     return VoteOut(
         ok=True,
         place_id=vote_data.place_id,
         vote=vote_data.vote,
-        created_at=datetime.now(ZoneInfo('UTC')).isoformat()
+        created_at=range_end.isoformat(),
+        worth_it_count=counts["worth_it"],
+        mid_count=counts["mid"],
+        skip_count=counts["skip"],
+        total_votes=counts["total"]
     )
 
 
