@@ -28,6 +28,7 @@ type PlaceCardProps = {
     skip: number;
     total: number;
   };
+  scoreWeights?: { popularity: number; distance: number };
   cooldownLabel?: string | null;
   activeVote?: VoteValue | null;
   animateVote?: boolean;
@@ -44,6 +45,7 @@ export default function PlaceCard({
   chips,
   statusLabel,
   voteCounts,
+  scoreWeights,
   cooldownLabel,
   activeVote,
   animateVote,
@@ -80,12 +82,30 @@ export default function PlaceCard({
       Vietnamese: "bg-lime-100 text-lime-700",
     }[value] ?? "bg-[var(--primary-soft)] text-[var(--primary)]");
   const chipsList = chips && chips.length > 0 ? chips : [label];
-  const derivedScore =
+  const numericScoreRaw =
     typeof place.score === "number"
       ? place.score
-      : voteCounts
-      ? voteCounts.worth - voteCounts.skip + 0.5 * voteCounts.mid
+      : typeof place.score === "string" && place.score.trim().length > 0
+      ? Number(place.score)
       : null;
+  const numericScore =
+    typeof numericScoreRaw === "number" && Number.isFinite(numericScoreRaw)
+      ? numericScoreRaw
+      : null;
+  const distanceScore =
+    typeof place.distance_miles === "number" && !Number.isNaN(place.distance_miles)
+      ? Math.exp(-place.distance_miles / 2.5)
+      : null;
+  const popularityScore = voteCounts
+    ? voteCounts.worth - voteCounts.skip + 0.5 * voteCounts.mid
+    : null;
+  const derivedScore =
+    numericScore !== null
+      ? numericScore
+      : scoreWeights && popularityScore !== null && distanceScore !== null
+      ? scoreWeights.popularity * popularityScore +
+        scoreWeights.distance * distanceScore
+      : popularityScore;
   const scoreLabel =
     typeof derivedScore === "number" ? derivedScore.toFixed(1) : null;
   const distanceLabel =

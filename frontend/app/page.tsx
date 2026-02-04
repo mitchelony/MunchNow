@@ -776,6 +776,7 @@ export default function HomePage() {
                       chips={chips}
                       statusLabel={status}
                       voteCounts={votes}
+                      scoreWeights={{ popularity: 0.85, distance: 0.15 }}
                       cooldownLabel={cooldownLabel}
                       activeVote={activeVote}
                       animateVote={animateVote}
@@ -841,6 +842,7 @@ export default function HomePage() {
                             chips={chips}
                             statusLabel={status}
                             voteCounts={votes}
+                            scoreWeights={{ popularity: 0.85, distance: 0.15 }}
                             cooldownLabel={cooldownLabel}
                             activeVote={activeVote}
                             animateVote={animateVote}

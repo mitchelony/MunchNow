@@ -60,6 +60,33 @@ function formatPriceTier(price?: number | string | null) {
   return "—";
 }
 
+function getCategoryChips(place: Place, max: number) {
+  const chips = new Set<string>();
+  if (place.categories) {
+    place.categories.forEach((value) => {
+      if (chips.size >= max) return;
+      const text = String(value);
+      const parts = text
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (parts.length === 0) {
+        const label = formatCategoryLabel(value);
+        if (label) chips.add(label);
+        return;
+      }
+      parts.forEach((part) => {
+        if (chips.size < max) {
+          const label = formatCategoryLabel(part);
+          if (label) chips.add(label);
+        }
+      });
+    });
+  }
+  if (chips.size === 0) chips.add("Uncategorized");
+  return Array.from(chips).slice(0, max);
+}
+
 export default function ClosePage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
@@ -391,6 +418,7 @@ export default function ClosePage() {
             <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
               {places.map((place, index) => {
                 const votes = computeVoteCounts(place);
+                const chips = getCategoryChips(place, 3);
                 const remaining = getCooldownRemaining(place.id);
                 const cooldownLabel =
                   remaining > 0 ? formatRemaining(remaining) : null;
@@ -403,7 +431,9 @@ export default function ClosePage() {
                     key={String(place.id)}
                     place={place}
                     rank={index + 1}
+                    chips={chips}
                     voteCounts={votes}
+                    scoreWeights={{ popularity: 0.25, distance: 0.75 }}
                     cooldownLabel={cooldownLabel}
                     activeVote={activeVote}
                     animateVote={animateVote}
