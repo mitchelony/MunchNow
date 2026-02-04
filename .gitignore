@@ -213,3 +213,7 @@ __marimo__/
 # Allow frontend lib directory
 !frontend/lib/
 !frontend/lib/**
+
+# csv
+seed_votes.csv
+scripts/seed_from_yelp.py
