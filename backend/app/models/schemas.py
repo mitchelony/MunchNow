@@ -139,3 +139,23 @@ class TrendingResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """Schema for error responses."""
     error: str
+
+
+# Campus Models
+class CampusOut(BaseModel):
+    """Schema for campus output."""
+    id: int
+    name: str
+    short_name: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CampusesResponse(BaseModel):
+    """Schema for campuses response."""
+    campuses: list[CampusOut]

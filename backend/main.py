@@ -6,7 +6,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import trending, health, votes, places
+from app.api.routes import trending, health, votes, places, campuses
 
 app = FastAPI()
 
@@ -23,3 +23,4 @@ app.include_router(trending.router)
 app.include_router(health.router)
 app.include_router(votes.router)
 app.include_router(places.router)
+app.include_router(campuses.router)

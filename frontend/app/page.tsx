@@ -13,10 +13,10 @@ import CategoryChips from "../components/CategoryChips";
 import PlaceCard from "../components/PlaceCard";
 import TopBar from "../components/TopBar";
 import VoteButtons from "../components/VoteButtons";
-import { getOrCreateSessionId, getTrending, submitVote } from "../lib/api";
+import { getCampuses, getOrCreateSessionId, getTrending, submitVote } from "../lib/api";
 import { track } from "../lib/analytics";
 import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../lib/maps";
-import type { Place, VoteResponse, VoteValue } from "../lib/types";
+import type { Campus, Place, VoteResponse, VoteValue } from "../lib/types";
 
 const CATEGORIES = [
   "Quick Bites",
@@ -80,7 +80,11 @@ function pickCategory(place: Place) {
 
 type PlaceSection = "top_3" | "more_places";
 
-function buildPlaceProps(place: Place, section?: PlaceSection) {
+function buildPlaceProps(
+  place: Place,
+  section?: PlaceSection,
+  campusId?: number | null
+) {
   const distance =
     (place as { distance_miles?: number | null }).distance_miles ?? null;
   return {
@@ -90,6 +94,7 @@ function buildPlaceProps(place: Place, section?: PlaceSection) {
     tags: place.categories?.length ? place.categories : undefined,
     price_tier: place.price_tier ?? null,
     distance_miles: distance ?? undefined,
+    campus_id: campusId ?? undefined,
   };
 }
 
@@ -168,6 +173,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [campusId, setCampusId] = useState<number | null>(null);
+  const [campusPickerOpen, setCampusPickerOpen] = useState(false);
   const [voteTarget, setVoteTarget] = useState<Place | null>(null);
   const [voteSubmitting, setVoteSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -205,6 +213,10 @@ export default function HomePage() {
   };
 
   const [initialLoad, setInitialLoad] = useState(true);
+  const selectedCampus = useMemo(
+    () => campuses.find((campus) => campus.id === campusId) ?? null,
+    [campuses, campusId]
+  );
 
   const categoryParam = useMemo(() => {
     if (initialLoad) return undefined;
@@ -214,6 +226,38 @@ export default function HomePage() {
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("munchhsv_campus_id");
+    if (stored) {
+      const parsed = Number(stored);
+      if (Number.isFinite(parsed)) {
+        setCampusId(parsed);
+      }
+    } else {
+      setCampusPickerOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    getCampuses()
+      .then((data) => {
+        if (!isActive) return;
+        setCampuses(data);
+        if (campusId && !data.some((campus) => campus.id === campusId)) {
+          setCampusId(null);
+          setCampusPickerOpen(true);
+        }
+      })
+      .catch(() => {
+        if (isActive) setCampuses([]);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [campusId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -263,10 +307,20 @@ export default function HomePage() {
 
   useEffect(() => {
     let isActive = true;
+    if (!campusId) {
+      setLoading(false);
+      setPlaces([]);
+      setError(null);
+      return () => {
+        isActive = false;
+      };
+    }
+
     setLoading(true);
     setError(null);
 
     getTrending({
+      campusId,
       city: "Huntsville",
       category: categoryParam,
       time_window: "7d",
@@ -286,7 +340,7 @@ export default function HomePage() {
     return () => {
       isActive = false;
     };
-  }, [categoryParam]);
+  }, [categoryParam, campusId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -309,7 +363,7 @@ export default function HomePage() {
     const query = buildMapsQuery(place.name, place.address ?? null);
     const link = getPreferredMapsLink(query);
     track("open_in_maps", {
-      ...buildPlaceProps(place),
+      ...buildPlaceProps(place, undefined, campusId),
       provider: isIOS() ? "apple" : "google",
     });
     window.open(link, "_blank", "noopener,noreferrer");
@@ -319,7 +373,8 @@ export default function HomePage() {
     track("place_open_modal", {
       ...buildPlaceProps(
         place,
-        rankPosition && rankPosition <= 3 ? "top_3" : "more_places"
+        rankPosition && rankPosition <= 3 ? "top_3" : "more_places",
+        campusId
       ),
     });
     setVoteTarget(place);
@@ -347,7 +402,7 @@ export default function HomePage() {
         session_id: sessionId,
       });
       track("vote_cast", {
-        ...buildPlaceProps(place),
+        ...buildPlaceProps(place, undefined, campusId),
         verdict: vote,
         surface,
       });
@@ -444,7 +499,7 @@ export default function HomePage() {
         const id = String(place.id);
         if (state.seen.has(id)) return;
         state.seen.add(id);
-        track("places_impression", buildPlaceProps(place, section));
+        track("places_impression", buildPlaceProps(place, section, campusId));
       });
     };
 
@@ -467,11 +522,58 @@ export default function HomePage() {
     >
       <header className="fixed top-0 left-0 z-50 w-full border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md transition-all">
         <div className="mx-auto flex w-full max-w-none flex-col gap-3 px-4 py-4 sm:px-6 lg:px-10 2xl:px-16">
-          <TopBar />
+          <TopBar
+            campusName={
+              selectedCampus?.short_name ?? selectedCampus?.name ?? null
+            }
+            onChangeCampus={() => setCampusPickerOpen(true)}
+          />
         </div>
       </header>
 
       <main className="flex w-full flex-1 flex-col pt-[96px]">
+        {campusPickerOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--text)] shadow-lg">
+              <h2 className="text-lg font-semibold">
+                Pick your campus for better picks
+              </h2>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
+                We use this to sort places by distance.
+              </p>
+              <div className="mt-4 flex flex-col gap-2">
+                {campuses.map((campus) => (
+                  <button
+                    key={campus.id}
+                    type="button"
+                    className="rounded-xl border border-[var(--border)] px-4 py-3 text-left text-sm font-medium hover:bg-[var(--surface-2)]"
+                    onClick={() => {
+                      setCampusId(campus.id);
+                      setCampusPickerOpen(false);
+                      if (typeof window !== "undefined") {
+                        window.localStorage.setItem(
+                          "munchhsv_campus_id",
+                          String(campus.id)
+                        );
+                      }
+                      track("campus_selected", {
+                        campus_id: campus.id,
+                        campus_name: campus.name,
+                      });
+                    }}
+                  >
+                    {campus.short_name ?? campus.name}
+                  </button>
+                ))}
+              </div>
+              {campuses.length === 0 && (
+                <p className="mt-4 text-sm text-[var(--text-muted)]">
+                  Loading campuses…
+                </p>
+              )}
+            </div>
+          </div>
+        )}
         <div className="mx-auto w-full max-w-none px-4 pt-8 pb-4 sm:px-6 lg:px-10 2xl:px-16">
           <h1 className="font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-[var(--text)]">
             Hungry in

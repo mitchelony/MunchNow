@@ -9,6 +9,12 @@ def get_current_date_time():
     current_dt = datetime.now(target_timezone)
     return current_dt
 
+
+def fetch_campuses():
+    supabase = get_supabase()
+    response = supabase.table("campuses").select("*").execute()
+    return response.data
+
 # Places Queries
 def _attach_distance(place: dict) -> dict:
     distances = place.pop("place_distances", None) or []

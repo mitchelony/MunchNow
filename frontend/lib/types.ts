@@ -23,6 +23,7 @@ export type VoteSummary = {
 export type Campus = {
   id: number;
   name: string;
+  short_name?: string | null;
   city?: string | null;
   state?: string | null;
   latitude?: number | null;

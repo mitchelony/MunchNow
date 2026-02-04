@@ -1,4 +1,4 @@
-import type { Place, PlaceId, VoteResponse, VoteValue } from "./types";
+import type { Campus, Place, PlaceId, VoteResponse, VoteValue } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
 const DEFAULT_CAMPUS_ID = Number(process.env.NEXT_PUBLIC_CAMPUS_ID ?? "");
@@ -70,6 +70,19 @@ function assertPlacesShape(places: Place[]): Place[] {
     }
   }
   return places;
+}
+
+export async function getCampuses(): Promise<Campus[]> {
+  const url = buildUrl("/campuses");
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) {
+    throw new Error("Failed to load campuses");
+  }
+  const data = await res.json();
+  if (data && typeof data === "object" && Array.isArray(data.campuses)) {
+    return data.campuses as Campus[];
+  }
+  return [];
 }
 
 export async function getTrending(params: TrendingParams): Promise<Place[]> {
