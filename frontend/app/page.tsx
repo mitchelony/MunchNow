@@ -608,7 +608,7 @@ export default function HomePage() {
     }
   };
 
-  const displayPlaces = places.slice(0, 10);
+  const displayPlaces = places.slice(0, 20);
   const topPlaces = displayPlaces.slice(0, 3);
   const morePlaces = displayPlaces.slice(3);
   const topKey = useMemo(
