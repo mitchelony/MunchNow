@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import Link from "next/link";
-import TopBar from "../components/TopBar";
-import PlaceCard from "../components/PlaceCard";
-import { getCampuses, getPlaces } from "../lib/api";
-import type { Campus, Place } from "../lib/types";
+import TopBar from "../../components/TopBar";
+import PlaceCard from "../../components/PlaceCard";
+import VoteButtons from "../../components/VoteButtons";
+import { getCampuses, getOrCreateSessionId, getPlaces, submitVote } from "../../lib/api";
+import { track } from "../../lib/analytics";
+import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../../lib/maps";
+import type { Campus, Place, VoteResponse, VoteValue } from "../../lib/types";
 
 function computeVoteCounts(place: Place) {
   const worth = place.worth_it_count ?? 0;
@@ -15,6 +24,16 @@ function computeVoteCounts(place: Place) {
   return { worth, mid, skip, total };
 }
 
+function applyVoteToPlace(place: Place, response: VoteResponse) {
+  return {
+    ...place,
+    worth_it_count: response.worth_it_count,
+    mid_count: response.mid_count,
+    skip_count: response.skip_count,
+    total_votes: response.total_votes,
+  };
+}
+
 export default function ClosePage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,11 +41,44 @@ export default function ClosePage() {
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [campusId, setCampusId] = useState<number | null>(null);
   const [campusPickerOpen, setCampusPickerOpen] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [voteTarget, setVoteTarget] = useState<Place | null>(null);
+  const [voteSubmitting, setVoteSubmitting] = useState(false);
+  const [voteCooldowns, setVoteCooldowns] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(() => Date.now());
+  const [voteFeedback, setVoteFeedback] = useState<
+    Record<string, { vote: VoteValue; at: number }>
+  >({});
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+  const COOLDOWN_KEY = "munch_vote_cooldowns";
+  const FEEDBACK_WINDOW_MS = 1200;
 
   const selectedCampus = useMemo(
     () => campuses.find((campus) => campus.id === campusId) ?? null,
     [campuses, campusId]
   );
+
+  const formatRemaining = (ms: number) => {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  };
+
+  const getCooldownRemaining = (placeId: Place["id"]) => {
+    const key = String(placeId);
+    const expiresAt = voteCooldowns[key];
+    if (!expiresAt) return 0;
+    return Math.max(0, expiresAt - now);
+  };
+
+  useEffect(() => {
+    setSessionId(getOrCreateSessionId());
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -40,6 +92,48 @@ export default function ClosePage() {
       setCampusPickerOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(COOLDOWN_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as Record<string, number>;
+      if (parsed && typeof parsed === "object") {
+        setVoteCooldowns(parsed);
+      }
+    } catch {
+      // ignore invalid storage
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(COOLDOWN_KEY, JSON.stringify(voteCooldowns));
+  }, [voteCooldowns]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!Object.keys(voteFeedback).length) return;
+    setVoteFeedback((prev) => {
+      let changed = false;
+      const next: Record<string, { vote: VoteValue; at: number }> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        if (now - value.at < FEEDBACK_WINDOW_MS) {
+          next[key] = value;
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [now, voteFeedback, FEEDBACK_WINDOW_MS]);
 
   useEffect(() => {
     let isActive = true;
@@ -93,6 +187,78 @@ export default function ClosePage() {
       isActive = false;
     };
   }, [campusId, selectedCampus?.city]);
+
+  useEffect(() => {
+    if (!toastTimer.current) return;
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  const handleOpenMaps = (place: Place) => {
+    const query = buildMapsQuery(place.name, place.address ?? null);
+    const link = getPreferredMapsLink(query);
+    track("open_in_maps", {
+      place_id: place.id,
+      place_name: place.name,
+      distance_miles: place.distance_miles ?? undefined,
+      campus_id: campusId ?? undefined,
+      provider: isIOS() ? "apple" : "google",
+    });
+    window.open(link, "_blank", "noopener,noreferrer");
+  };
+
+  const handleVoteForPlace = async (
+    place: Place,
+    vote: VoteValue,
+    surface: "card" | "modal"
+  ) => {
+    if (!sessionId) return;
+    const remaining = getCooldownRemaining(place.id);
+    if (remaining > 0) return;
+    setVoteSubmitting(true);
+    try {
+      const voteResponse = await submitVote({
+        place_id: place.id,
+        vote,
+        session_id: sessionId,
+      });
+      track("vote_cast", {
+        place_id: place.id,
+        place_name: place.name,
+        distance_miles: place.distance_miles ?? undefined,
+        campus_id: campusId ?? undefined,
+        verdict: vote,
+        surface,
+      });
+      setPlaces((prev) =>
+        prev.map((item) =>
+          item.id === place.id ? applyVoteToPlace(item, voteResponse) : item
+        )
+      );
+      if (voteTarget?.id === place.id) {
+        setVoteTarget((prev) =>
+          prev ? applyVoteToPlace(prev, voteResponse) : prev
+        );
+      }
+      setVoteFeedback((prev) => ({
+        ...prev,
+        [String(place.id)]: { vote, at: Date.now() },
+      }));
+      setVoteCooldowns((prev) => ({
+        ...prev,
+        [String(place.id)]: Date.now() + COOLDOWN_MS,
+      }));
+    } finally {
+      setVoteSubmitting(false);
+    }
+  };
+
+  const handleVote = async (vote: VoteValue) => {
+    if (!voteTarget) return;
+    await handleVoteForPlace(voteTarget, vote, "modal");
+    setVoteTarget(null);
+  };
 
   const themeStyle: CSSProperties = {
     ["--primary" as string]: "#3b82f6",
@@ -156,7 +322,7 @@ export default function ClosePage() {
 
         <div className="mx-auto w-full max-w-none px-4 pt-8 pb-4 sm:px-6 lg:px-10 2xl:px-16">
           <h1 className="font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-[var(--text)]">
-            Close to {selectedCampus?.short_name ?? selectedCampus?.name ?? "Campus"}
+            Close to {selectedCampus?.short_name ?? selectedCampus?.name ?? "campus"}
           </h1>
           <p className="mt-2 text-[15px] font-medium text-[var(--text-muted)]">
             Sorted purely by distance from your campus.
@@ -185,16 +351,28 @@ export default function ClosePage() {
             <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
               {places.map((place, index) => {
                 const votes = computeVoteCounts(place);
+                const remaining = getCooldownRemaining(place.id);
+                const cooldownLabel =
+                  remaining > 0 ? formatRemaining(remaining) : null;
+                const feedback = voteFeedback[String(place.id)];
+                const activeVote = feedback?.vote ?? null;
+                const animateVote =
+                  !!feedback && now - feedback.at < FEEDBACK_WINDOW_MS;
                 return (
                   <PlaceCard
                     key={String(place.id)}
                     place={place}
                     rank={index + 1}
                     voteCounts={votes}
+                    cooldownLabel={cooldownLabel}
+                    activeVote={activeVote}
+                    animateVote={animateVote}
                     size="stacked"
                     showDistanceBubble
-                    onSelect={() => {}}
-                    onVote={() => {}}
+                    onSelect={(value) => setVoteTarget(value)}
+                    onVote={(value, vote) =>
+                      handleVoteForPlace(value, vote, "card")
+                    }
                   />
                 );
               })}
@@ -227,7 +405,7 @@ export default function ClosePage() {
               </span>
             </div>
             <span className="text-[11px] font-bold text-[var(--primary)]">
-              Close
+              Close to you
             </span>
           </button>
           <Link
@@ -243,6 +421,117 @@ export default function ClosePage() {
           </Link>
         </div>
       </nav>
+      {voteTarget ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={() => setVoteTarget(null)}
+        >
+          <div
+            className="w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-soft)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  {selectedCampus?.short_name ?? selectedCampus?.name ?? "Campus"}
+                </p>
+                <h3 className="text-2xl font-semibold text-[var(--text)]">
+                  {voteTarget.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVoteTarget(null)}
+                className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold text-[var(--text-muted)]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.2fr_1fr]">
+              <div className="space-y-6">
+                <div>
+                  <p className="text-base font-medium text-[var(--text-muted)]">
+                    {voteTarget.categories?.slice(0, 3).join(" • ")}
+                  </p>
+                  {voteTarget.address ? (
+                    <p className="mt-2 text-sm text-[var(--text-muted)]">
+                      {voteTarget.address}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
+                    <p className="text-xs font-semibold text-[var(--text-muted)]">
+                      Distance from campus
+                    </p>
+                    <p className="text-sm font-bold text-[var(--text)]">
+                      {voteTarget.distance_miles < 10
+                        ? `${voteTarget.distance_miles.toFixed(1)} mi`
+                        : `${voteTarget.distance_miles.toFixed(0)} mi`}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
+                    <p className="text-xs font-semibold text-[var(--text-muted)]">
+                      Price
+                    </p>
+                    <p className="text-sm font-bold text-[var(--text)]">
+                      {typeof voteTarget.price_tier === "number"
+                        ? "$".repeat(
+                            Math.min(Math.max(voteTarget.price_tier, 1), 4)
+                          )
+                        : voteTarget.price_tier ?? "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  {voteTarget &&
+                  getCooldownRemaining(voteTarget.id) > 0 &&
+                  !(
+                    voteFeedback[String(voteTarget.id)] &&
+                    now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
+                      FEEDBACK_WINDOW_MS
+                  ) ? (
+                    <div className="flex min-h-[58px] items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
+                      Next vote in {formatRemaining(
+                        getCooldownRemaining(voteTarget.id)
+                      )}
+                    </div>
+                  ) : (
+                    <VoteButtons
+                      onVote={handleVote}
+                      isSubmitting={voteSubmitting}
+                      activeVote={
+                        voteTarget
+                          ? voteFeedback[String(voteTarget.id)]?.vote ?? null
+                          : null
+                      }
+                      animateVote={
+                        voteTarget
+                          ? now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
+                            FEEDBACK_WINDOW_MS
+                          : false
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <button
+                  type="button"
+                  onClick={() => handleOpenMaps(voteTarget)}
+                  className="w-full rounded-2xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-dark)]"
+                >
+                  Open in Maps
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

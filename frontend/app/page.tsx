@@ -883,7 +883,7 @@ export default function HomePage() {
                 near_me
               </span>
             </div>
-            <span className="text-[11px] font-medium">Close</span>
+            <span className="text-[11px] font-medium">Close to you</span>
           </Link>
         </div>
       </nav>
