@@ -21,7 +21,7 @@ router = APIRouter()
 async def get_places(
     campus_id: int | None = Query(None, description="Campus identifier for place lookup"),
     category: str | None = Query(None, description="Filter places by category"),
-    limit: int = Query(25, description="Maximum number of places to return", ge=1, le=100),
+    limit: int = Query(20, description="Maximum number of places to return", ge=1, le=100),
     city: str = Query("Huntsville", description="City to search for places"),
     sort: str = Query(
         default="best",

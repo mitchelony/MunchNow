@@ -441,7 +441,7 @@ export default function HomePage() {
       city: "Huntsville",
       category: categoryParam,
       time_window: "7d",
-      limit: 10,
+      limit: 20,
       sort: "trending",
     })
       .then((data) => {
@@ -570,14 +570,14 @@ export default function HomePage() {
       city: "Huntsville",
       category: categoryParam,
       time_window: "7d",
-      limit: 50,
+      limit: 40,
       sort: "trending",
     })
       .then((data) => {
         const pool = data.filter(
           (place) => !pinnedIds.has(String(place.id))
         );
-        const next = shufflePlaces(pool).slice(0, 7);
+        const next = shufflePlaces(pool).slice(0, 37);
         setPlaces([...pinned, ...next]);
       })
       .catch(() => {

@@ -223,7 +223,7 @@ export default function ClosePage() {
     getPlaces({
       campusId,
       city: selectedCampus?.city ?? "Huntsville",
-      limit: 30,
+      limit: 20,
       sort: "closest",
     })
       .then((data) => {

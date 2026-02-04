@@ -14,7 +14,7 @@ async def get_trending(
     city: str = Query(default="Huntsville", description="City to filter places"),
     category: str = Query(default=None, description="Category to filter places"),
     time_window: str = Query(default="7d", description="Time window: 24h, 7d, 30d"),
-    limit: int = Query(default=12, ge=1, le=100, description="Maximum number of results"),
+    limit: int = Query(default=20, ge=1, le=100, description="Maximum number of results"),
     sort: str = Query(
         default="trending",
         description="Sort mode: trending, best, closest"
