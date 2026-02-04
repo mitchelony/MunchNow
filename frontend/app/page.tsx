@@ -562,11 +562,31 @@ export default function HomePage() {
     setShuffleActive(true);
     if (shuffleTimer.current) clearTimeout(shuffleTimer.current);
     shuffleTimer.current = setTimeout(() => setShuffleActive(false), 220);
-    setPlaces((prev) =>
-      prev.length > 3
-        ? [...prev.slice(0, 3), ...shufflePlaces(prev.slice(3))]
-        : prev
-    );
+    if (!campusId) return;
+    const pinned = places.slice(0, 3);
+    const pinnedIds = new Set(pinned.map((place) => String(place.id)));
+    getTrending({
+      campusId,
+      city: "Huntsville",
+      category: categoryParam,
+      time_window: "7d",
+      limit: 50,
+      sort: "trending",
+    })
+      .then((data) => {
+        const pool = data.filter(
+          (place) => !pinnedIds.has(String(place.id))
+        );
+        const next = shufflePlaces(pool).slice(0, 7);
+        setPlaces([...pinned, ...next]);
+      })
+      .catch(() => {
+        setPlaces((prev) =>
+          prev.length > 3
+            ? [...prev.slice(0, 3), ...shufflePlaces(prev.slice(3))]
+            : prev
+        );
+      });
     track("shuffle_click", { surface: "discover" });
   };
 
