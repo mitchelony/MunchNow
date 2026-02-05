@@ -521,17 +521,6 @@ export default function ClosePage() {
             </div>
             <span className="text-[11px] font-medium">Discover</span>
           </Link>
-          <Link
-            href="/saved"
-            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
-          >
-            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
-              <span className="material-symbols-outlined text-[26px]">
-                bookmark
-              </span>
-            </div>
-            <span className="text-[11px] font-medium">Saved</span>
-          </Link>
           <button
             type="button"
             className="group flex flex-1 flex-col items-center gap-1.5"
@@ -546,6 +535,17 @@ export default function ClosePage() {
               Close to you
             </span>
           </button>
+          <Link
+            href="/saved"
+            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
+          >
+            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
+              <span className="material-symbols-outlined text-[26px]">
+                bookmark
+              </span>
+            </div>
+            <span className="text-[11px] font-medium">Saved</span>
+          </Link>
         </div>
       </nav>
       {voteTarget ? (
