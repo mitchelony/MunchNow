@@ -575,6 +575,28 @@ export default function ClosePage() {
               </button>
             </div>
 
+            <div className="px-6 pt-6">
+              <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
+                {voteTarget.image_url ? (
+                  <img
+                    src={voteTarget.image_url}
+                    alt={voteTarget.name}
+                    className="h-48 w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-48 w-full items-center justify-center bg-gradient-to-br from-slate-900/10 to-slate-500/10">
+                    <span className="material-symbols-outlined text-[28px] text-[var(--text-muted)]">
+                      image
+                    </span>
+                  </div>
+                )}
+                <div className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/80">
+                  Photos via Yelp
+                </div>
+              </div>
+            </div>
+
             <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.2fr_1fr]">
               <div className="space-y-6">
                 <div>
