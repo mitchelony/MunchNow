@@ -89,6 +89,8 @@ class PlaceOut(BaseModel):
     price_tier: Optional[str] = None
     distance_miles: float
     score: float
+    image_url: Optional[str] = None
+    image_source: Optional[str] = None
 
     class Config:
         from_attributes = True

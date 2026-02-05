@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import type { Place, VoteValue } from "../lib/types";
 
 function formatPriceTier(price?: number | string | null) {
@@ -56,6 +56,7 @@ export default function PlaceCard({
   onSelect,
   onVote,
 }: PlaceCardProps) {
+  const [imageError, setImageError] = useState(false);
   const price = formatPriceTier(place.price_tier);
   const label = chips?.[0] ?? statusLabel ?? "Local Favorite";
   const meta = [price, place.city].filter(Boolean).join(" • ");
@@ -133,6 +134,26 @@ export default function PlaceCard({
       }}
       className={`group flex flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-soft)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${layout}`}
     >
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
+        {place.image_url && !imageError ? (
+          <img
+            src={place.image_url}
+            alt={place.name}
+            className="h-40 w-full object-cover"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-slate-900/10 to-slate-500/10">
+            <span className="material-symbols-outlined text-[28px] text-[var(--text-muted)]">
+              image
+            </span>
+          </div>
+        )}
+        <div className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/80">
+          Photos via Yelp
+        </div>
+      </div>
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">

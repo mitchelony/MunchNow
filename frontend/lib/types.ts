@@ -52,4 +52,6 @@ export type Place = {
   skip_count?: number | null;
   total_votes?: number | null;
   vote_summary?: VoteSummary | null;
+  image_url?: string | null;
+  image_source?: string | null;
 };
