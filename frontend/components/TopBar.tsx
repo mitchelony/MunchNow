@@ -26,20 +26,6 @@ export default function TopBar({ campusName, onChangeCampus }: TopBarProps) {
         )}
       </div>
       <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--surface-2)]"
-          aria-label="Search"
-        >
-          <span className="material-symbols-outlined">search</span>
-        </button>
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--surface-2)]"
-          aria-label="Account"
-        >
-          <span className="material-symbols-outlined">account_circle</span>
-        </button>
         <ThemeToggle />
       </div>
     </div>
