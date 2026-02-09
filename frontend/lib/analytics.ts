@@ -11,7 +11,11 @@ export type AnalyticsEvent =
   | "sort_mode_selected"
   | "shuffle_click"
   | "open_in_maps_clicked"
-  | "campus_selected";
+  | "campus_selected"
+  | "beta_onboarding_view"
+  | "beta_onboarding_open_app_clicked"
+  | "beta_onboarding_apple_guide_clicked"
+  | "beta_onboarding_go_trending_clicked";
 
 export type AnalyticsContext = {
   campus?: string;
@@ -52,6 +56,14 @@ type EventPropsByName = {
     source: "onboarding" | "settings" | "prompt";
     is_first_time: boolean;
   };
+  beta_onboarding_view: {
+    path: string;
+    referrer?: string;
+    user_agent?: string;
+  };
+  beta_onboarding_open_app_clicked: Record<string, never>;
+  beta_onboarding_apple_guide_clicked: Record<string, never>;
+  beta_onboarding_go_trending_clicked: Record<string, never>;
 };
 
 const isProduction = process.env.NODE_ENV === "production";
