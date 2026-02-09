@@ -1,141 +1,275 @@
-# MunchHSV — what to eat right now (Huntsville)
+# MunchNow (MunchHSV)
 
-A mobile-first “food dashboard” for Huntsville that surfaces quick picks by category (Quick Bites, Cheap, Late Night, Coffee Spots, Local Favorite), lets people open directions instantly, and vote so the list gets smarter over time.
+Campus-aware, student-focused food discovery for Huntsville.
 
-**Live:** https://munchnow.vercel.app  
-**API:** https://munchnow.onrender.com  
-*(Replace these if your URLs differ.)*
+- Frontend: Next.js App Router (`frontend/`)
+- Backend: FastAPI + Supabase Postgres (`backend/`)
+- Live frontend: `https://munchnow.vercel.app`
+- Live backend: `https://munchnow.onrender.com`
 
----
+## What is implemented
 
-## What this is (and why)
+- Campus-based ranking (`campus_id` required on place-read endpoints)
+- Distance-aware scoring using `place_distances`
+- Sort modes: `best`, `closest`, `trending`
+- Stable ordering and pagination-ready API behavior
+- Votes with server-returned updated counts
+- Category filtering (including `All` behavior on frontend)
+- Yelp image enrichment support (`image_url`, `image_source`)
+- Hidden beta onboarding flow at `/beta/onboarding` (noindex/nofollow)
+- PostHog event tracking with shared context payload
 
-Food decisions are a repeating problem: you’re hungry, you want something good, and you don’t want to scroll Google Maps or DoorDash forever. MunchHSV is designed to be **fast**:
+## Architecture
 
-**See → Choose → Maps → Vote**
+### Frontend (`frontend/`)
 
-Start local (Huntsville), keep it simple, and grow based on real usage.
+- Next.js 16 (App Router)
+- Main surfaces:
+  - `/` discover/trending
+  - `/close` close-to-campus view
+  - `/place/[id]` place details
+  - `/beta/onboarding` hidden beta onboarding page
+- API client: `frontend/lib/api.ts`
+- Analytics helper: `frontend/lib/analytics.ts`
 
----
+### Backend (`backend/`)
 
-## Core features
+- FastAPI app entry: `backend/main.py`
+- Routes:
+  - `GET /health`
+  - `GET /campuses`
+  - `GET /places`
+  - `GET /places/{id}`
+  - `GET /trending`
+  - `POST /votes`
+  - `POST /beta/testers`
+- Supabase access via service role key: `backend/app/db/client.py`
 
-- **5 curated categories**: Quick Bites, Cheap, Late Night, Coffee Spots, Local Favorite
-- **Trending picks** based on community votes (time-windowed)
-- **One-tap “Open in Maps”** flow (no extra steps)
-- **Voting loop** so picks reflect what people actually choose
-- **Mobile-first UX** (fast sessions, thumb-friendly)
-- **Web analytics** via Vercel Analytics (traffic + usage visibility)
+## API contracts (current)
 
----
+### Campus requirement
 
-## Tech stack
+`campus_id` is required for endpoints returning places:
 
-**Frontend**
-- Next.js / React (deployed on **Vercel**)
-- Vercel Web Analytics
+- `GET /places`
+- `GET /places/{id}`
+- `GET /trending`
 
-**Backend**
-- **FastAPI (Python)** REST API
-- Supabase Python client
+Missing `campus_id` returns `400`.
 
-**Database**
-- **Supabase Postgres**
-  - `places` (seeded)
-  - `votes` (FK → places)
+### Sort modes
 
-**Hosting**
-- Frontend: **Vercel**
-- Backend: **Render**
+Supported query param: `sort=best|closest|trending`
 
----
+- `/places` default: `best`
+- `/trending` default: `trending`
 
-## Architecture (high level)
+### Per-place payload fields
 
-- Frontend calls the FastAPI backend for:
-  - places (by category / city)
-  - trending picks (by time window)
-  - submitting votes
-- Backend reads/writes through Supabase (Postgres)
-- “Popularity” / “Trending” is derived from vote counts over a time window
+Frontend depends on:
 
-Why this setup:
-- **Decoupled deployments** (frontend and backend ship independently)
-- Supabase keeps the DB + admin workflow simple while still using real Postgres
-- FastAPI keeps backend logic explicit and scalable (routing, schemas, validation)
+- `id`
+- `name`
+- `categories`
+- `price_tier`
+- `distance_miles`
+- `score`
 
----
+Vote-enabled responses may also include:
 
-## API endpoints (v1)
+- `worth_it_count`, `mid_count`, `skip_count`, `total_votes`
+- `image_url`, `image_source`
 
-Examples (your routes may differ — adjust to match your code):
+### Scoring
 
-- `GET /health`
-- `GET /places?city=Huntsville&category=cheap&limit=12`
-- `GET /trending?city=Huntsville&time_window=7d&limit=12`
-- `POST /votes` (vote for a place)
+- Popularity from votes
+- Distance signal: `exp(-distance_miles / 2.5)`
+- Weighted blend by sort mode:
+  - `best`: `0.65 * popularity + 0.35 * distance`
+  - `closest`: `0.25 * popularity + 0.75 * distance`
+  - `trending`: `0.85 * popularity + 0.15 * distance`
 
----
+Ordering is stable using:
+
+1. score DESC
+2. distance_miles ASC
+3. id ASC
+
+## Beta onboarding
+
+Hidden page:
+
+- `GET /beta/onboarding` (unlisted in nav, robots noindex/nofollow)
+
+Flow:
+
+- Collect tester name + email
+- Persist to `beta_testers` via `POST /beta/testers`
+- Capture onboarding analytics events
+
+Backend request body:
+
+```json
+{
+  "name": "Jane Tester",
+  "email": "jane@example.com",
+  "source": "beta_onboarding"
+}
+```
+
+Behavior:
+
+- Upserts by `email`
+- Returns saved tester row payload
+
+## Analytics (PostHog)
+
+Client helper: `frontend/lib/analytics.ts`
+
+Core events include:
+
+- `campus_selected`
+- `category_selected`
+- `sort_mode_selected`
+- `place_card_viewed`
+- `place_clicked`
+- `open_in_maps_clicked`
+- `vote_cast`
+- `shuffle_click`
+- `beta_onboarding_view`
+- `beta_onboarding_identity_submitted`
+- `beta_onboarding_open_app_clicked`
+- `beta_onboarding_apple_guide_clicked`
+- `beta_onboarding_go_trending_clicked`
+
+Shared context attached to events includes:
+
+- `campus`, `campus_id`
+- `sort_mode`
+- `category`
+- `session_id`
+- `app_version`
+
+## Database notes
+
+Core tables used by app/runtime:
+
+- `campuses`
+- `places`
+- `place_distances`
+- `votes`
+- `beta_testers`
+
+`places` currently uses:
+
+- `id`, `name`, `address`, `city`
+- `category` (array of strings)
+- `price_tier`
+- `lat`, `lng`
+- `image_url`, `image_source`
 
 ## Local development
 
-### Prereqs
-- Python 3.11+ (or your version)
-- Node 18+
-- Supabase project (URL + keys)
+### Backend
 
-### Backend (FastAPI)
-1. `cd backend`
-2. Create `.env` (or use `.env.example`) and set:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-   - (optional) `SUPABASE_SERVICE_ROLE_KEY` *(avoid using this in public-facing deployments)*
-3. Install deps and run:
-   - `uvicorn main:app --reload`
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
 
-Backend runs on: `http://127.0.0.1:8000`
+Runs on `http://127.0.0.1:8000`.
+
+Required env (`backend/.env`):
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_ANON_KEY` (kept for compatibility)
+- `ENVIRONMENT` (optional)
+- `YELP_API_KEY` (only for Yelp enrichment script)
 
 ### Frontend
-1. `cd frontend`
-2. Set env vars (example):
-   - `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`
-3. Install deps and run:
-   - `npm install`
-   - `npm run dev`
 
-Frontend runs on: `http://127.0.0.1:3000`
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
----
+Runs on `http://127.0.0.1:3000`.
 
-## Deployment notes (what matters)
+Recommended env (`frontend/.env.local`):
+
+- `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`
+- `NEXT_PUBLIC_CAMPUS_ID=<default campus id>`
+- `NEXT_PUBLIC_POSTHOG_KEY=<optional>`
+- `NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com` (optional override)
+- `NEXT_PUBLIC_APP_VERSION=<optional>`
+
+## Utility scripts
+
+Run from `backend/` with venv active and `PYTHONPATH=.`.
+
+### Yelp image enrichment
+
+Script: `backend/scripts/yelp_enrich.py`
+
+Example:
+
+```bash
+PYTHONPATH=. python3 scripts/yelp_enrich.py --limit 1000 --output-csv yelp_images.csv
+```
+
+Options:
+
+- `--include-existing` to reprocess rows with existing images
+- `--dry-run` to preview matches
+- `--output-csv <file>` to export matched `place_id,image_url,image_source`
+
+### Bulk add places + distances
+
+Script: `backend/scripts/import_new_places.py`
+
+Example:
+
+```bash
+PYTHONPATH=. python3 scripts/import_new_places.py --file /path/to/new_places.txt
+```
+
+Script behavior:
+
+1. Parses lines of place data
+2. Skips duplicates by name + address
+3. Inserts into `places`
+4. Upserts `place_distances` for seeded campuses
+5. Prints summary counts
+
+## Deployment
+
+### Frontend (Vercel)
+
+- Build command: `npm run build`
+- Ensure frontend env vars are set in Vercel project settings
 
 ### Backend (Render)
-- Run command should bind to Render’s port (no `--reload` in production)
-- Configure environment variables in Render (don’t commit secrets)
 
-### CORS
-If your frontend is on Vercel and backend is on Render, the backend must allow requests from:
-- `https://munchnow.vercel.app` (and any custom domain you add later)
+- Start command should run FastAPI on Render port
+- Ensure backend env vars are set in Render
+- Render free tier can sleep when inactive; app behavior should tolerate cold starts
 
----
+## Quick troubleshooting
 
-## Known constraints (v1)
-
-- No photos yet (intentional — avoids API cost + complexity early)
-- Huntsville-first dataset (seeded list)
-- Trending depends on vote volume (cold start is real)
-
----
-
-## Next improvements
-
-- Add “Open now” reliability + better hours handling
-- Add lightweight photos later (likely via Places API or curated uploads)
-- Improve ranking with time decay + category balancing
-- Expand beyond Huntsville once the loop is proven
-
----
+- `400 campus_id is required`: include `campus_id` on place-read requests
+- Frontend runtime error for campus id: set `NEXT_PUBLIC_CAMPUS_ID`
+- Empty/partial Yelp enrichment results:
+  - check `YELP_API_KEY`
+  - run with `--include-existing` and high `--limit`
+  - verify table columns match script (`lat/lng` expected)
+- Missing Python modules in venv:
+  - activate venv and reinstall `requirements.txt`
 
 ## License
 
-MIT (add a LICENSE file if you want it formally included).
+MIT (`LICENSE`)
