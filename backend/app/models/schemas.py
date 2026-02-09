@@ -161,3 +161,19 @@ class CampusOut(BaseModel):
 class CampusesResponse(BaseModel):
     """Schema for campuses response."""
     campuses: list[CampusOut]
+
+
+class BetaTesterIn(BaseModel):
+    """Schema for beta tester onboarding capture."""
+    name: str = Field(..., min_length=1, max_length=200)
+    email: str = Field(..., min_length=3, max_length=320)
+    source: Optional[str] = "beta_onboarding"
+
+
+class BetaTesterOut(BaseModel):
+    """Schema for beta tester upsert response."""
+    ok: bool
+    id: int
+    name: str
+    email: str
+    source: str

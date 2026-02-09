@@ -13,6 +13,7 @@ export type AnalyticsEvent =
   | "open_in_maps_clicked"
   | "campus_selected"
   | "beta_onboarding_view"
+  | "beta_onboarding_identity_submitted"
   | "beta_onboarding_open_app_clicked"
   | "beta_onboarding_apple_guide_clicked"
   | "beta_onboarding_go_trending_clicked";
@@ -60,10 +61,23 @@ type EventPropsByName = {
     path: string;
     referrer?: string;
     user_agent?: string;
+    tester_name?: string;
+    tester_email?: string;
   };
-  beta_onboarding_open_app_clicked: Record<string, never>;
+  beta_onboarding_identity_submitted: {
+    tester_name: string;
+    tester_email: string;
+  };
+  beta_onboarding_open_app_clicked: {
+    tester_name?: string;
+    tester_email?: string;
+    onboarding_complete?: boolean;
+  };
   beta_onboarding_apple_guide_clicked: Record<string, never>;
-  beta_onboarding_go_trending_clicked: Record<string, never>;
+  beta_onboarding_go_trending_clicked: {
+    tester_name?: string;
+    tester_email?: string;
+  };
 };
 
 const isProduction = process.env.NODE_ENV === "production";

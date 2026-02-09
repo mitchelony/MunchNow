@@ -26,6 +26,20 @@ type VotePayload = {
   session_id?: string | null;
 };
 
+type BetaTesterPayload = {
+  name: string;
+  email: string;
+  source?: "beta_onboarding" | "settings" | "prompt";
+};
+
+type BetaTesterResponse = {
+  ok: boolean;
+  id: number;
+  name: string;
+  email: string;
+  source: string;
+};
+
 function buildUrl(path: string, params?: Record<string, string | number | undefined>) {
   if (!BASE_URL) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
@@ -140,6 +154,27 @@ export async function submitVote(payload: VotePayload): Promise<VoteResponse> {
 
   if (!res.ok) {
     throw new Error("Failed to submit vote");
+  }
+
+  return res.json();
+}
+
+export async function submitBetaTester(
+  payload: BetaTesterPayload
+): Promise<BetaTesterResponse> {
+  const url = buildUrl("/beta/testers");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: payload.name,
+      email: payload.email,
+      source: payload.source ?? "beta_onboarding",
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to save beta tester");
   }
 
   return res.json();

@@ -15,6 +15,24 @@ def fetch_campuses():
     response = supabase.table("campuses").select("*").execute()
     return response.data
 
+
+def upsert_beta_tester(name: str, email: str, source: str = "beta_onboarding") -> dict:
+    supabase = get_supabase()
+    payload = {
+        "name": name.strip(),
+        "email": email.strip().lower(),
+        "source": source,
+    }
+    response = (
+        supabase.table("beta_testers")
+        .upsert(payload, on_conflict="email")
+        .execute()
+    )
+    rows = response.data or []
+    if not rows:
+        raise HTTPException(status_code=500, detail="Failed to save beta tester")
+    return rows[0]
+
 # Places Queries
 def _attach_distance(place: dict) -> dict:
     distances = place.pop("place_distances", None) or []
