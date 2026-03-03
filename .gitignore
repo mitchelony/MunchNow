@@ -220,3 +220,5 @@ backend/.DS_Store
 # csv
 seed_votes.csv
 scripts/seed_from_yelp.py
+
+MunchNow UI Redesign/
