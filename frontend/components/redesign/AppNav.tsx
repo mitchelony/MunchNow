@@ -65,7 +65,10 @@ export default function AppNav({
       ) : null}
 
       {showMobile ? (
-      <nav className="md:hidden fixed bottom-6 left-0 right-0 z-40 px-5">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-5 pb-3"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
         <div className="max-w-md mx-auto rounded-[28px] bg-white/85 dark:bg-[#1a1a1a]/92 backdrop-blur border border-gray-200/60 dark:border-transparent shadow-2xl px-2 py-2">
           <div className="grid grid-cols-4 gap-1 text-center">
             {TABS.map((tab) => {

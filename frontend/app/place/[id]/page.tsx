@@ -368,39 +368,39 @@ export default function PlacePage() {
                   type="button"
                   disabled={voteSubmitting}
                   onClick={() => handleVote("worth_it")}
-                  className={`flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-bold transition sm:text-sm ${
+                  className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
                     activeVote === "worth_it"
                       ? "border-emerald-500 bg-emerald-500/30 text-white"
                       : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-emerald-500/20"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] leading-none">thumb_up</span>
+                  <span className="material-symbols-outlined text-[16px] leading-none">thumb_up</span>
                   Worth It
                 </button>
                 <button
                   type="button"
                   disabled={voteSubmitting}
                   onClick={() => handleVote("mid")}
-                  className={`flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-bold transition sm:text-sm ${
+                  className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
                     activeVote === "mid"
                       ? "border-amber-500 bg-amber-500/30 text-white"
                       : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-amber-500/20"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] leading-none">remove</span>
+                  <span className="material-symbols-outlined text-[16px] leading-none">remove</span>
                   Mid
                 </button>
                 <button
                   type="button"
                   disabled={voteSubmitting}
                   onClick={() => handleVote("skip")}
-                  className={`flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-bold transition sm:text-sm ${
+                  className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
                     activeVote === "skip"
                       ? "border-rose-500 bg-rose-500/30 text-white"
                       : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-rose-500/20"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] leading-none">thumb_down</span>
+                  <span className="material-symbols-outlined text-[16px] leading-none">thumb_down</span>
                   Skip
                 </button>
               </div>

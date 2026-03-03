@@ -417,27 +417,27 @@ export default function HomePage() {
                           type="button"
                           disabled={voteSubmitting}
                           onClick={() => handleVote(place, "worth_it")}
-                          className="flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-3 text-[11px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-emerald-500/20"
+                          className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-2 text-[10px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-emerald-500/20"
                         >
-                          <span className="material-symbols-outlined text-[18px] leading-none">thumb_up</span>
+                          <span className="material-symbols-outlined text-[16px] leading-none">thumb_up</span>
                           Worth It
                         </button>
                         <button
                           type="button"
                           disabled={voteSubmitting}
                           onClick={() => handleVote(place, "mid")}
-                          className="flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-3 text-[11px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-amber-500/20"
+                          className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-2 text-[10px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-amber-500/20"
                         >
-                          <span className="material-symbols-outlined text-[18px] leading-none">remove</span>
+                          <span className="material-symbols-outlined text-[16px] leading-none">remove</span>
                           Mid
                         </button>
                         <button
                           type="button"
                           disabled={voteSubmitting}
                           onClick={() => handleVote(place, "skip")}
-                          className="flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-3 text-[11px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-rose-500/20"
+                          className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-2 text-[10px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-rose-500/20"
                         >
-                          <span className="material-symbols-outlined text-[18px] leading-none">thumb_down</span>
+                          <span className="material-symbols-outlined text-[16px] leading-none">thumb_down</span>
                           Skip
                         </button>
                       </div>

@@ -278,14 +278,14 @@ export default function PlaceCard({
           <button
             type="button"
             onClick={(event) => handleVote(event, "worth_it")}
-            className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-2 transition active:scale-95 ${
               activeVote === "worth_it"
                 ? "border-[var(--success)]/40 bg-[var(--success)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--success)]/30 hover:bg-[var(--success)] hover:text-white"
             } ${animateVote && activeVote === "worth_it" ? "animate-pop" : ""}`}
             disabled={!!cooldownLabel}
           >
-            <span className="material-symbols-outlined text-[20px]">
+            <span className="material-symbols-outlined text-[18px]">
               thumb_up
             </span>
             {activeVote === "worth_it" ? (
@@ -302,14 +302,14 @@ export default function PlaceCard({
           <button
             type="button"
             onClick={(event) => handleVote(event, "mid")}
-            className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-2 transition active:scale-95 ${
               activeVote === "mid"
                 ? "border-[var(--warning)]/40 bg-[var(--warning)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--warning)]/30 hover:bg-[var(--warning)] hover:text-white"
             } ${animateVote && activeVote === "mid" ? "animate-pop" : ""}`}
             disabled={!!cooldownLabel}
           >
-            <span className="material-symbols-outlined text-[20px]">
+            <span className="material-symbols-outlined text-[18px]">
               sentiment_neutral
             </span>
             {activeVote === "mid" ? (
@@ -326,14 +326,14 @@ export default function PlaceCard({
           <button
             type="button"
             onClick={(event) => handleVote(event, "skip")}
-            className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 transition active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-2 transition active:scale-95 ${
               activeVote === "skip"
                 ? "border-[var(--danger)]/40 bg-[var(--danger)] text-white"
                 : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--danger)]/30 hover:bg-[var(--danger)] hover:text-white"
             } ${animateVote && activeVote === "skip" ? "animate-pop" : ""}`}
             disabled={!!cooldownLabel}
           >
-            <span className="material-symbols-outlined text-[20px]">
+            <span className="material-symbols-outlined text-[18px]">
               thumb_down
             </span>
             {activeVote === "skip" ? (

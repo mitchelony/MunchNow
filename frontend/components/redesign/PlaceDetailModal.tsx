@@ -189,27 +189,27 @@ export default function PlaceDetailModal({
                     type="button"
                     disabled={voteSubmitting}
                     onClick={() => onVote("worth_it")}
-                    className="flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#181a21] px-3 py-4 text-sm font-bold text-slate-100 shadow-md transition-all hover:-translate-y-0.5 hover:bg-emerald-500/20 hover:shadow-lg disabled:opacity-60"
+                    className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-2 text-xs font-bold text-slate-100 shadow-md transition-all hover:-translate-y-0.5 hover:bg-emerald-500/20 hover:shadow-lg disabled:opacity-60"
                   >
-                    <span className="material-symbols-outlined text-[21px] leading-none">thumb_up</span>
+                    <span className="material-symbols-outlined text-[17px] leading-none">thumb_up</span>
                     Worth It
                   </button>
                   <button
                     type="button"
                     disabled={voteSubmitting}
                     onClick={() => onVote("mid")}
-                    className="flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#181a21] px-3 py-4 text-sm font-bold text-slate-100 shadow-md transition-all hover:-translate-y-0.5 hover:bg-amber-500/20 hover:shadow-lg disabled:opacity-60"
+                    className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-2 text-xs font-bold text-slate-100 shadow-md transition-all hover:-translate-y-0.5 hover:bg-amber-500/20 hover:shadow-lg disabled:opacity-60"
                   >
-                    <span className="material-symbols-outlined text-[21px] leading-none">remove</span>
+                    <span className="material-symbols-outlined text-[17px] leading-none">remove</span>
                     Mid
                   </button>
                   <button
                     type="button"
                     disabled={voteSubmitting}
                     onClick={() => onVote("skip")}
-                    className="flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#181a21] px-3 py-4 text-sm font-bold text-slate-100 shadow-md transition-all hover:-translate-y-0.5 hover:bg-rose-500/20 hover:shadow-lg disabled:opacity-60"
+                    className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-2 text-xs font-bold text-slate-100 shadow-md transition-all hover:-translate-y-0.5 hover:bg-rose-500/20 hover:shadow-lg disabled:opacity-60"
                   >
-                    <span className="material-symbols-outlined text-[21px] leading-none">thumb_down</span>
+                    <span className="material-symbols-outlined text-[17px] leading-none">thumb_down</span>
                     Skip
                   </button>
                 </div>
