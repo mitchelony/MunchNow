@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useState, type MouseEvent } from "react";
 import type { Place, VoteValue } from "../lib/types";
 
@@ -136,11 +137,13 @@ export default function PlaceCard({
     >
       <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
         {place.image_url && !imageError ? (
-          <img
+          <Image
             src={place.image_url}
             alt={place.name}
+            fill
+            unoptimized
+            sizes="(max-width: 768px) 100vw, 40vw"
             className="h-40 w-full object-cover"
-            loading="lazy"
             onError={() => setImageError(true)}
           />
         ) : (

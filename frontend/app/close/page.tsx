@@ -1,20 +1,21 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
-import Link from "next/link";
-import TopBar from "../../components/TopBar";
-import PlaceCard from "../../components/PlaceCard";
-import VoteButtons from "../../components/VoteButtons";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import ThemeToggle from "../../components/ThemeToggle";
+import AppNav from "../../components/redesign/AppNav";
+import CampusPickerModal from "../../components/redesign/CampusPickerModal";
+import PlaceDetailModal from "../../components/redesign/PlaceDetailModal";
 import { getCampuses, getOrCreateSessionId, getTrending, submitVote } from "../../lib/api";
-import { setAnalyticsContext, trackEvent } from "../../lib/analytics";
-import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../../lib/maps";
+import { extractCategoryChips } from "../../lib/tags";
 import type { Campus, Place, VoteResponse, VoteValue } from "../../lib/types";
+import {
+  formatCooldown,
+  getVoteCooldown,
+  getVoteRecords,
+  saveVoteRecord,
+  type StoredVoteRecord,
+} from "../../lib/voteCooldown";
 
 function computeVoteCounts(place: Place) {
   const worth = place.worth_it_count ?? 0;
@@ -22,6 +23,25 @@ function computeVoteCounts(place: Place) {
   const skip = place.skip_count ?? 0;
   const total = place.total_votes ?? worth + mid + skip;
   return { worth, mid, skip, total };
+}
+
+function formatDistance(distance?: number | null) {
+  if (typeof distance !== "number" || Number.isNaN(distance)) return "-";
+  return distance < 10 ? `${distance.toFixed(1)} mi` : `${distance.toFixed(0)} mi`;
+}
+
+function formatPriceTier(price?: number | string | null) {
+  if (!price) return "-";
+  if (typeof price === "number") {
+    const count = Math.min(Math.max(price, 1), 4);
+    return "$".repeat(count);
+  }
+  const numeric = Number(price);
+  if (Number.isFinite(numeric)) {
+    const count = Math.min(Math.max(Math.round(numeric), 1), 4);
+    return "$".repeat(count);
+  }
+  return String(price);
 }
 
 function applyVoteToPlace(place: Place, response: VoteResponse) {
@@ -34,102 +54,42 @@ function applyVoteToPlace(place: Place, response: VoteResponse) {
   };
 }
 
-function formatCategoryLabel(value?: string | number | null) {
-  if (value === null || value === undefined) return "";
-  const normalized = String(value).replace(/[_-]+/g, " ").toLowerCase();
-  return normalized
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-function formatPriceTier(price?: number | string | null) {
-  if (!price) return "—";
-  if (typeof price === "number") {
-    const count = Math.min(Math.max(price, 1), 4);
-    return "$".repeat(count);
-  }
-  if (typeof price === "string" && price.trim().length > 0) {
-    const numeric = Number(price);
-    if (Number.isFinite(numeric)) {
-      const count = Math.min(Math.max(Math.round(numeric), 1), 4);
-      return "$".repeat(count);
-    }
-    return price;
-  }
-  return "—";
-}
-
-function getCategoryChips(place: Place, max: number) {
-  const chips = new Set<string>();
-  if (place.categories) {
-    place.categories.forEach((value) => {
-      if (chips.size >= max) return;
-      const text = String(value);
-      const parts = text
-        .split(",")
-        .map((part) => part.trim())
-        .filter(Boolean);
-      if (parts.length === 0) {
-        const label = formatCategoryLabel(value);
-        if (label) chips.add(label);
-        return;
-      }
-      parts.forEach((part) => {
-        if (chips.size < max) {
-          const label = formatCategoryLabel(part);
-          if (label) chips.add(label);
-        }
-      });
-    });
-  }
-  if (chips.size === 0) chips.add("Uncategorized");
-  return Array.from(chips).slice(0, max);
-}
-
 export default function ClosePage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [campusId, setCampusId] = useState<number | null>(null);
   const [campusPickerOpen, setCampusPickerOpen] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [voteTarget, setVoteTarget] = useState<Place | null>(null);
   const [voteSubmitting, setVoteSubmitting] = useState(false);
-  const [voteCooldowns, setVoteCooldowns] = useState<Record<string, number>>({});
+  const [voteRecords, setVoteRecords] = useState<Record<string, StoredVoteRecord>>({});
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [voteFeedback, setVoteFeedback] = useState<
-    Record<string, { vote: VoteValue; at: number }>
-  >({});
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const impressionsRef = useRef<Set<string>>(new Set());
-  const previousSortMode = useRef<"best" | "closest" | "trending" | null>(null);
-
-  const COOLDOWN_MS = 24 * 60 * 60 * 1000;
-  const COOLDOWN_KEY = "munch_vote_cooldowns";
-  const FEEDBACK_WINDOW_MS = 1200;
 
   const selectedCampus = useMemo(
     () => campuses.find((campus) => campus.id === campusId) ?? null,
     [campuses, campusId]
   );
-  const sortMode: "best" | "closest" | "trending" = "closest";
 
-  const formatRemaining = (ms: number) => {
-    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const pad = (value: number) => String(value).padStart(2, "0");
-    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-  };
+  const campusTheme = useMemo(() => {
+    const campusName = (selectedCampus?.short_name ?? selectedCampus?.name ?? "").toLowerCase();
+    const isAamu = campusName.includes("aamu") || campusName.includes("alabama a&m");
+    return isAamu
+      ? { from: "#800000", to: "#a03030" }
+      : { from: "#0ea5e9", to: "#06b6d4" };
+  }, [selectedCampus]);
+  const selectedPlace = useMemo(
+    () => places.find((place) => String(place.id) === selectedPlaceId) ?? null,
+    [places, selectedPlaceId]
+  );
 
-  const getCooldownRemaining = (placeId: Place["id"]) => {
-    const key = String(placeId);
-    const expiresAt = voteCooldowns[key];
-    if (!expiresAt) return 0;
-    return Math.max(0, expiresAt - now);
+  const handleSelectCampus = (id: number) => {
+    setCampusId(id);
+    setCampusPickerOpen(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("munchhsv_campus_id", String(id));
+    }
   };
 
   useEffect(() => {
@@ -137,85 +97,21 @@ export default function ClosePage() {
   }, []);
 
   useEffect(() => {
-    setAnalyticsContext({
-      campus: selectedCampus?.short_name ?? selectedCampus?.name ?? undefined,
-      campus_id: campusId ?? undefined,
-      sort_mode: sortMode,
-      category: null,
-      session_id: sessionId,
-      app_version: process.env.NEXT_PUBLIC_APP_VERSION,
-    });
-  }, [selectedCampus, campusId, sortMode, sessionId]);
-
-  useEffect(() => {
-    if (!previousSortMode.current) {
-      trackEvent("sort_mode_selected", { sort_mode: sortMode });
-      previousSortMode.current = sortMode;
-      return;
-    }
-    if (previousSortMode.current !== sortMode) {
-      trackEvent("sort_mode_selected", {
-        sort_mode: sortMode,
-        previous_sort_mode: previousSortMode.current,
-      });
-      previousSortMode.current = sortMode;
-    }
-  }, [sortMode]);
+    setVoteRecords(getVoteRecords());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem("munchhsv_campus_id");
     if (stored) {
       const parsed = Number(stored);
-      if (Number.isFinite(parsed)) {
-        setCampusId(parsed);
-      }
+      if (Number.isFinite(parsed)) setCampusId(parsed);
     } else {
       setCampusPickerOpen(true);
     }
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(COOLDOWN_KEY);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as Record<string, number>;
-      if (parsed && typeof parsed === "object") {
-        setVoteCooldowns(parsed);
-      }
-    } catch {
-      // ignore invalid storage
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(COOLDOWN_KEY, JSON.stringify(voteCooldowns));
-  }, [voteCooldowns]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!Object.keys(voteFeedback).length) return;
-    setVoteFeedback((prev) => {
-      let changed = false;
-      const next: Record<string, { vote: VoteValue; at: number }> = {};
-      Object.entries(prev).forEach(([key, value]) => {
-        if (now - value.at < FEEDBACK_WINDOW_MS) {
-          next[key] = value;
-        } else {
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [now, voteFeedback, FEEDBACK_WINDOW_MS]);
 
   useEffect(() => {
     let isActive = true;
@@ -223,12 +119,13 @@ export default function ClosePage() {
       .then((data) => {
         if (!isActive) return;
         setCampuses(data);
-        if (campusId && !data.some((campus) => campus.id === campusId)) {
-          setCampusId(null);
-          setCampusPickerOpen(true);
+        if (!campusId && data[0]) {
+          setCampusId(data[0].id);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error("Failed to load campuses", err);
         if (isActive) setCampuses([]);
       });
     return () => {
@@ -240,8 +137,6 @@ export default function ClosePage() {
     let isActive = true;
     if (!campusId) {
       setLoading(false);
-      setPlaces([]);
-      setError(null);
       return () => {
         isActive = false;
       };
@@ -257,16 +152,7 @@ export default function ClosePage() {
       sort: "closest",
     })
       .then((data) => {
-        if (!isActive) return;
-        const sorted = data
-          .slice()
-          .sort(
-            (a, b) =>
-              (a.distance_miles ?? Infinity) -
-                (b.distance_miles ?? Infinity) ||
-              Number(a.id) - Number(b.id)
-          );
-        setPlaces(sorted);
+        if (isActive) setPlaces(data);
       })
       .catch(() => {
         if (isActive) setError("Could not load nearby places.");
@@ -280,445 +166,252 @@ export default function ClosePage() {
     };
   }, [campusId, selectedCampus?.city]);
 
-  useEffect(() => {
-    places.forEach((place, index) => {
-      const id = String(place.id);
-      if (impressionsRef.current.has(id)) return;
-      if (index >= 20) return;
-      impressionsRef.current.add(id);
-      trackEvent("place_card_viewed", {
-        place_id: place.id,
-        distance_miles: place.distance_miles ?? undefined,
-        rank_position: index + 1,
-      });
-    });
-  }, [places]);
-
-  useEffect(() => {
-    if (!toastTimer.current) return;
-    return () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    };
-  }, []);
-
-  const handleOpenMaps = (place: Place) => {
-    const query = buildMapsQuery(place.name, place.address ?? null);
-    const link = getPreferredMapsLink(query);
-    trackEvent("open_in_maps_clicked", {
-      place_id: place.id,
-      distance_miles: place.distance_miles ?? undefined,
-      provider: isIOS() ? "apple" : "google",
-    });
-    window.open(link, "_blank", "noopener,noreferrer");
-  };
-
-  const handleSelectPlace = (place: Place, rankPosition?: number) => {
-    trackEvent("place_clicked", {
-      place_id: place.id,
-      distance_miles: place.distance_miles ?? undefined,
-      rank_position: rankPosition,
-    });
-    setVoteTarget(place);
-  };
-
-  const handleVoteForPlace = async (
-    place: Place,
-    vote: VoteValue,
-    surface: "card" | "modal"
-  ) => {
-    if (!sessionId) return;
-    const remaining = getCooldownRemaining(place.id);
-    if (remaining > 0) return;
+  const handleVote = async (place: Place, vote: VoteValue) => {
+    if (!sessionId || voteSubmitting) return;
+    const cooldown = getVoteCooldown(place.id, Date.now(), voteRecords);
+    if (!cooldown.canVote) return;
     setVoteSubmitting(true);
     try {
-      const voteResponse = await submitVote({
+      const response = await submitVote({
         place_id: place.id,
         vote,
         session_id: sessionId,
       });
-      trackEvent("vote_cast", {
-        place_id: place.id,
-        distance_miles: place.distance_miles ?? undefined,
-        vote,
-      });
       setPlaces((prev) =>
-        prev.map((item) =>
-          item.id === place.id ? applyVoteToPlace(item, voteResponse) : item
-        )
+        prev.map((item) => (item.id === place.id ? applyVoteToPlace(item, response) : item))
       );
-      if (voteTarget?.id === place.id) {
-        setVoteTarget((prev) =>
-          prev ? applyVoteToPlace(prev, voteResponse) : prev
-        );
-      }
-      setVoteFeedback((prev) => ({
+      const timestamp = Date.now();
+      saveVoteRecord(place.id, vote, timestamp);
+      setVoteRecords((prev) => ({
         ...prev,
-        [String(place.id)]: { vote, at: Date.now() },
+        [String(place.id)]: { type: vote, timestamp },
       }));
-      setVoteCooldowns((prev) => ({
-        ...prev,
-        [String(place.id)]: Date.now() + COOLDOWN_MS,
-      }));
+    } catch {
+      setError("Could not submit vote. Please try again.");
     } finally {
       setVoteSubmitting(false);
     }
   };
 
-  const handleVote = async (vote: VoteValue) => {
-    if (!voteTarget) return;
-    await handleVoteForPlace(voteTarget, vote, "modal");
-    setVoteTarget(null);
-  };
-
-  const campusName = (selectedCampus?.short_name ?? selectedCampus?.name ?? "")
-    .toLowerCase();
-  const isAamu = campusName.includes("aamu") || campusName.includes("alabama a&m");
-  const themeStyle: CSSProperties = {
-    ["--primary" as string]: isAamu ? "#7f1d1d" : "#3b82f6",
-    ["--primary-dark" as string]: isAamu ? "#6b1b1b" : "#2563eb",
-    ["--primary-soft" as string]: isAamu
-      ? "rgba(127, 29, 29, 0.16)"
-      : "rgba(59, 130, 246, 0.16)",
-  };
-
   return (
-    <div
-      className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-28"
-      style={themeStyle}
-    >
-      <header className="fixed top-0 left-0 z-50 w-full border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md transition-all">
-        <div className="mx-auto flex w-full max-w-none flex-col gap-3 px-4 py-4 sm:px-6 lg:px-10 2xl:px-16">
-          <TopBar
-            campusName={selectedCampus?.short_name ?? selectedCampus?.name ?? null}
-            onChangeCampus={() => setCampusPickerOpen(true)}
-          />
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-32">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur border-b border-gray-100 dark:border-transparent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: campusTheme.from }}>
+                Close To You
+              </h1>
+              <button
+                type="button"
+                onClick={() => setCampusPickerOpen(true)}
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-400"
+              >
+                <span className="material-symbols-outlined text-[16px]">location_on</span>
+                {selectedCampus?.short_name ?? selectedCampus?.name ?? "Pick campus"}
+                <span className="material-symbols-outlined text-[16px]">expand_more</span>
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <AppNav
+                active="close"
+                accentFrom={campusTheme.from}
+                accentTo={campusTheme.to}
+                glowColor={campusTheme.from}
+                showMobile={false}
+              />
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="flex w-full flex-1 flex-col pt-[96px]">
-        {campusPickerOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--text)] shadow-lg">
-              <h2 className="text-lg font-semibold">
-                Pick your campus for better picks
-              </h2>
-              <p className="mt-2 text-sm text-[var(--text-muted)]">
-                We use this to sort places by distance.
-              </p>
-              <div className="mt-4 flex flex-col gap-2">
-                {campuses.map((campus) => (
-                  <button
-                    key={campus.id}
-                    type="button"
-                    className="rounded-xl border border-[var(--border)] px-4 py-3 text-left text-sm font-medium hover:bg-[var(--surface-2)]"
-                    onClick={() => {
-                      const hadCampus = !!window.localStorage.getItem(
-                        "munchhsv_campus_id"
-                      );
-                      setCampusId(campus.id);
-                      setCampusPickerOpen(false);
-                      if (typeof window !== "undefined") {
-                        window.localStorage.setItem(
-                          "munchhsv_campus_id",
-                          String(campus.id)
-                        );
-                      }
-                      trackEvent("campus_selected", {
-                        campus: campus.short_name ?? campus.name,
-                        campus_id: campus.id,
-                        source: hadCampus ? "settings" : "onboarding",
-                        is_first_time: !hadCampus,
-                      });
-                    }}
-                  >
-                    {campus.short_name ?? campus.name}
-                  </button>
-                ))}
-              </div>
-              {campuses.length === 0 && (
-                <p className="mt-4 text-sm text-[var(--text-muted)]">
-                  Loading campuses…
-                </p>
-              )}
-            </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-64 rounded-3xl skeleton-shimmer" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-3xl bg-white dark:bg-[#1a1a1a] p-5 text-sm text-gray-600 dark:text-gray-300">
+            {error}
+          </div>
+        ) : places.length === 0 ? (
+          <div className="rounded-3xl bg-white dark:bg-[#1a1a1a] p-5 text-sm text-gray-600 dark:text-gray-300">
+            No places yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {places.map((place, index) => {
+              const votes = computeVoteCounts(place);
+              const chips = extractCategoryChips(place, 2);
+              const cooldown = getVoteCooldown(place.id, now, voteRecords);
+              return (
+                <article
+                  key={String(place.id)}
+                  className="group overflow-hidden rounded-[34px] border border-gray-200 bg-white shadow-xl transition-shadow duration-300 dark:border-white/5 dark:bg-[#17181f]"
+                  style={{
+                    boxShadow: `0 0 12px ${campusTheme.from}2f, 0 10px 28px -12px ${campusTheme.from}52, 0 18px 44px -30px ${campusTheme.from}22`,
+                  }}
+                >
+                  <div className="relative h-48 w-full overflow-hidden bg-gray-200 dark:bg-[#222]">
+                    {place.image_url ? (
+                      <Image
+                        src={place.image_url}
+                        alt={place.name}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900">
+                        <span className="material-symbols-outlined text-4xl text-slate-400">image</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    {index < 3 ? (
+                      <span
+                        className="absolute top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold text-white shadow-md"
+                        style={{ background: `linear-gradient(135deg, ${campusTheme.from}, ${campusTheme.to})` }}
+                      >
+                        <span className="material-symbols-outlined text-[14px]">emoji_events</span>
+                        #{index + 1}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="p-3.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlaceId(String(place.id))}
+                      className="block w-full break-words text-2xl font-black leading-[1] tracking-tight text-gray-900 transition hover:opacity-90 dark:text-white"
+                    >
+                      {place.name}
+                    </button>
+                    <div className="mt-2 flex items-center justify-center gap-3 text-gray-500 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold">
+                        <span className="material-symbols-outlined text-[14px]">location_on</span>
+                        {formatDistance(place.distance_miles)}
+                      </span>
+                      <span className="text-[18px] leading-none font-bold text-gray-500 dark:text-slate-400">
+                        {formatPriceTier(place.price_tier)}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
+                      {chips.map((chip) => (
+                        <span
+                          key={chip}
+                          className="rounded-full bg-gray-100 px-3 py-1 text-[11px] font-bold text-gray-700 dark:bg-white/10 dark:text-slate-200"
+                        >
+                          {chip}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-3.5 grid grid-cols-3 gap-2">
+                      <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 p-2 text-center dark:from-emerald-900/45 dark:to-emerald-700/20">
+                        <p className="text-lg leading-none font-black text-emerald-400">{votes.worth}</p>
+                        <p className="mt-1 text-lg font-bold text-emerald-400">Worth It</p>
+                      </div>
+                      <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 p-2 text-center dark:from-amber-900/45 dark:to-amber-700/20">
+                        <p className="text-lg leading-none font-black text-amber-400">{votes.mid}</p>
+                        <p className="mt-1 text-lg font-bold text-amber-400">Mid</p>
+                      </div>
+                      <div className="rounded-2xl bg-gradient-to-br from-rose-50 to-rose-100 p-2 text-center dark:from-rose-900/45 dark:to-rose-700/20">
+                        <p className="text-lg leading-none font-black text-rose-400">{votes.skip}</p>
+                        <p className="mt-1 text-lg font-bold text-rose-400">Skip</p>
+                      </div>
+                    </div>
+
+                    {cooldown.remainingTime > 0 ? (
+                      <div className="mt-3.5 rounded-3xl bg-gradient-to-r from-blue-50 to-indigo-50 px-3.5 py-3 text-left dark:from-indigo-900/45 dark:to-blue-900/35">
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-[26px] text-blue-700 dark:text-white">check</span>
+                          <div>
+                            <p className="text-lg font-black text-gray-900 dark:text-white">Vote Recorded!</p>
+                            <p className="text-xs font-semibold text-gray-600 dark:text-slate-300">
+                              Next vote:{" "}
+                              <span className="font-mono text-blue-700 dark:text-blue-300">
+                                {formatCooldown(cooldown.remainingTime)}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3.5 grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          disabled={voteSubmitting}
+                          onClick={() => handleVote(place, "worth_it")}
+                          className="flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-3 text-[11px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-emerald-500/20"
+                        >
+                          <span className="material-symbols-outlined text-[18px] leading-none">thumb_up</span>
+                          Worth It
+                        </button>
+                        <button
+                          type="button"
+                          disabled={voteSubmitting}
+                          onClick={() => handleVote(place, "mid")}
+                          className="flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-3 text-[11px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-amber-500/20"
+                        >
+                          <span className="material-symbols-outlined text-[18px] leading-none">remove</span>
+                          Mid
+                        </button>
+                        <button
+                          type="button"
+                          disabled={voteSubmitting}
+                          onClick={() => handleVote(place, "skip")}
+                          className="flex min-h-[82px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-[#181a21] px-2 py-3 text-[11px] font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-rose-500/20"
+                        >
+                          <span className="material-symbols-outlined text-[18px] leading-none">thumb_down</span>
+                          Skip
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
-
-        <div className="mx-auto w-full max-w-none px-4 pt-8 pb-4 sm:px-6 lg:px-10 2xl:px-16">
-          <h1 className="font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-[var(--text)]">
-            Close to {selectedCampus?.short_name ?? selectedCampus?.name ?? "campus"}
-          </h1>
-          <p className="mt-2 text-[15px] font-medium text-[var(--text-muted)]">
-            Sorted purely by distance from your campus.
-          </p>
-        </div>
-
-        <div className="mx-auto flex w-full max-w-none flex-col gap-4 px-4 pb-8 sm:px-6 lg:px-10 2xl:px-16">
-          {loading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={`skeleton-${index}`}
-                  className="h-48 rounded-2xl skeleton-shimmer"
-                />
-              ))}
-            </div>
-          ) : error ? (
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text-muted)]">
-              {error}
-            </div>
-          ) : places.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text-muted)]">
-              No places yet.
-            </div>
-          ) : (
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-              {places.map((place, index) => {
-                const votes = computeVoteCounts(place);
-                const chips = getCategoryChips(place, 3);
-                const remaining = getCooldownRemaining(place.id);
-                const cooldownLabel =
-                  remaining > 0 ? formatRemaining(remaining) : null;
-                const feedback = voteFeedback[String(place.id)];
-                const activeVote = feedback?.vote ?? null;
-                const animateVote =
-                  !!feedback && now - feedback.at < FEEDBACK_WINDOW_MS;
-                return (
-                  <PlaceCard
-                    key={String(place.id)}
-                    place={place}
-                    rank={index + 1}
-                    chips={chips}
-                    voteCounts={votes}
-                    scoreWeights={{ popularity: 0.25, distance: 0.75 }}
-                    cooldownLabel={cooldownLabel}
-                    activeVote={activeVote}
-                    animateVote={animateVote}
-                    size="stacked"
-                    showDistanceBubble
-                    onSelect={(value) => handleSelectPlace(value, index + 1)}
-                    onVote={(value, vote) =>
-                      handleVoteForPlace(value, vote, "card")
-                    }
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 z-50 w-full border-t border-slate-100 bg-[var(--surface)]/95 backdrop-blur-md shadow-[var(--shadow-nav)]">
-        <div className="mx-auto flex h-[84px] max-w-none items-start justify-around px-4 pt-3 pb-8 sm:px-6 lg:px-10 2xl:px-16">
-          <Link
-            href="/"
-            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
-          >
-            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
-              <span className="material-symbols-outlined text-[26px]">
-                explore
-              </span>
-            </div>
-            <span className="text-[11px] font-medium">Discover</span>
-          </Link>
-          <button
-            type="button"
-            className="group flex flex-1 flex-col items-center gap-1.5"
-            aria-current="page"
-          >
-            <div className="rounded-full bg-[var(--primary-soft)] p-1 transition-colors">
-              <span className="material-symbols-outlined filled text-[26px] text-[var(--primary)]">
-                near_me
-              </span>
-            </div>
-            <span className="text-[11px] font-bold text-[var(--primary)]">
-              Close to you
-            </span>
-          </button>
-          <Link
-            href="/saved"
-            className="group flex flex-1 flex-col items-center gap-1.5 text-slate-400 transition-colors hover:text-slate-600"
-          >
-            <div className="rounded-full p-1 transition-colors group-hover:bg-[var(--surface-2)]">
-              <span className="material-symbols-outlined text-[26px]">
-                bookmark
-              </span>
-            </div>
-            <span className="text-[11px] font-medium">Saved</span>
-          </Link>
-        </div>
-      </nav>
-      {voteTarget ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-          onClick={() => setVoteTarget(null)}
-        >
-          <div
-            className="w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-soft)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  {selectedCampus?.short_name ?? selectedCampus?.name ?? "Campus"}
-                </p>
-                <h3 className="text-2xl font-semibold text-[var(--text)]">
-                  {voteTarget.name}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setVoteTarget(null)}
-                className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold text-[var(--text-muted)]"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="px-6 pt-6">
-              <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
-                {voteTarget.image_url ? (
-                  <img
-                    src={voteTarget.image_url}
-                    alt={voteTarget.name}
-                    className="h-48 w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-48 w-full items-center justify-center bg-gradient-to-br from-slate-900/10 to-slate-500/10">
-                    <span className="material-symbols-outlined text-[28px] text-[var(--text-muted)]">
-                      image
-                    </span>
-                  </div>
-                )}
-                <div className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/80">
-                  Photos via Yelp
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.2fr_1fr]">
-              <div className="space-y-6">
-                <div>
-                  <p className="text-base font-medium text-[var(--text-muted)]">
-                    {voteTarget.categories
-                      ?.slice(0, 3)
-                      .map((value) => formatCategoryLabel(value))
-                      .join(" • ")}
-                  </p>
-                  {voteTarget.address ? (
-                    <p className="mt-2 text-sm text-[var(--text-muted)]">
-                      {voteTarget.address}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
-                    <p className="text-xs font-semibold text-[var(--text-muted)]">
-                      Distance from campus
-                    </p>
-                    <p className="text-sm font-bold text-[var(--text)]">
-                      {voteTarget.distance_miles < 10
-                        ? `${voteTarget.distance_miles.toFixed(1)} mi`
-                        : `${voteTarget.distance_miles.toFixed(0)} mi`}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 text-center">
-                    <p className="text-xs font-semibold text-[var(--text-muted)]">
-                      Price
-                    </p>
-                    <p className="text-sm font-bold text-[var(--text)]">
-                      {formatPriceTier(voteTarget.price_tier)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-base font-semibold text-[var(--text)]">
-                        Votes
-                      </h4>
-                      <p className="text-sm text-[var(--text-muted)]">
-                        {computeVoteCounts(voteTarget).total} total
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-4 text-sm font-semibold text-[var(--text-muted)]">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center text-[var(--success)]">
-                        <span className="material-symbols-outlined text-[16px]">
-                          thumb_up
-                        </span>
-                      </span>
-                      {computeVoteCounts(voteTarget).worth}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center text-[var(--warning)]">
-                        <span className="material-symbols-outlined text-[16px]">
-                          sentiment_neutral
-                        </span>
-                      </span>
-                      {computeVoteCounts(voteTarget).mid}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center text-[var(--danger)]">
-                        <span className="material-symbols-outlined text-[16px]">
-                          thumb_down
-                        </span>
-                      </span>
-                      {computeVoteCounts(voteTarget).skip}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  {voteTarget &&
-                  getCooldownRemaining(voteTarget.id) > 0 &&
-                  !(
-                    voteFeedback[String(voteTarget.id)] &&
-                    now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
-                      FEEDBACK_WINDOW_MS
-                  ) ? (
-                    <div className="flex min-h-[58px] items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-muted)]">
-                      Next vote in {formatRemaining(
-                        getCooldownRemaining(voteTarget.id)
-                      )}
-                    </div>
-                  ) : (
-                    <VoteButtons
-                      onVote={handleVote}
-                      isSubmitting={voteSubmitting}
-                      activeVote={
-                        voteTarget
-                          ? voteFeedback[String(voteTarget.id)]?.vote ?? null
-                          : null
-                      }
-                      animateVote={
-                        voteTarget
-                          ? now - (voteFeedback[String(voteTarget.id)]?.at ?? 0) <
-                            FEEDBACK_WINDOW_MS
-                          : false
-                      }
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <button
-                  type="button"
-                  onClick={() => handleOpenMaps(voteTarget)}
-                  className="w-full rounded-2xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-dark)]"
-                >
-                  Open in Maps
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {campusPickerOpen ? (
+        <CampusPickerModal
+          campuses={campuses}
+          selectedCampusId={campusId}
+          onClose={() => setCampusPickerOpen(false)}
+          onSelect={handleSelectCampus}
+        />
       ) : null}
+
+      {selectedPlace ? (
+        (() => {
+          const cooldown = getVoteCooldown(selectedPlace.id, now, voteRecords);
+          return (
+        <PlaceDetailModal
+          place={selectedPlace}
+          activeVote={cooldown.voteType}
+          cooldownRemaining={cooldown.remainingTime}
+          voteSubmitting={voteSubmitting}
+          onClose={() => setSelectedPlaceId(null)}
+          onVote={(vote) => handleVote(selectedPlace, vote)}
+        />
+          );
+        })()
+      ) : null}
+
+      <AppNav
+        active="close"
+        accentFrom={campusTheme.from}
+        accentTo={campusTheme.to}
+        glowColor={campusTheme.from}
+        showDesktop={false}
+      />
     </div>
   );
 }

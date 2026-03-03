@@ -17,8 +17,7 @@ export default function BetaOnboardingClient() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const storedName = window.localStorage.getItem("munch_beta_tester_name") || "";
-    const storedEmail =
-      window.localStorage.getItem("munch_beta_tester_email") || "";
+    const storedEmail = window.localStorage.getItem("munch_beta_tester_email") || "";
     if (storedName && storedEmail) {
       setTesterName(storedName);
       setTesterEmail(storedEmail);
@@ -43,6 +42,7 @@ export default function BetaOnboardingClient() {
     const name = testerName.trim();
     const email = testerEmail.trim().toLowerCase();
     if (!name || !email) return;
+
     setIdentityError("");
     setIsSubmittingIdentity(true);
     try {
@@ -70,171 +70,129 @@ export default function BetaOnboardingClient() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
-      <header>
-        <h1 className="font-display text-3xl font-extrabold text-[var(--text)] sm:text-4xl">
-          Welcome to the MunchHSV Beta
-        </h1>
-      </header>
+    <main className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="rounded-3xl border border-gray-200 dark:border-transparent bg-white dark:bg-[#1a1a1a] p-6 shadow-lg">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
+            Beta Access
+          </p>
+          <h1 className="mt-2 text-3xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
+            Welcome to the MunchNow Beta
+          </h1>
+          <p className="mt-3 text-sm md:text-base text-gray-600 dark:text-gray-300">
+            Help shape the app by using it naturally and voting on places around campus.
+          </p>
+        </header>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-xl font-semibold text-[var(--text)]">
-          Start beta onboarding
-        </h2>
-        <p className="mt-3 text-sm text-[var(--text-muted)]">
-          Enter your name and email so we can track who opened the beta page and who completed onboarding.
-        </p>
-        <form className="mt-4 space-y-3" onSubmit={handleIdentitySubmit}>
-          <div>
-            <label
-              htmlFor="tester-name"
-              className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]"
+        <section className="mt-5 rounded-3xl border border-gray-200 dark:border-transparent bg-white dark:bg-[#1a1a1a] p-6 shadow-lg">
+          <h2 className="text-xl font-black text-gray-900 dark:text-white">Start onboarding</h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            Enter your name and email so we can track beta onboarding completion.
+          </p>
+
+          <form className="mt-4 space-y-3" onSubmit={handleIdentitySubmit}>
+            <div>
+              <label htmlFor="tester-name" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Name
+              </label>
+              <input
+                id="tester-name"
+                type="text"
+                value={testerName}
+                onChange={(event) => setTesterName(event.target.value)}
+                className="w-full rounded-2xl border border-gray-200 dark:border-transparent bg-gray-50 dark:bg-[#232323] px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-400"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="tester-email" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Email
+              </label>
+              <input
+                id="tester-email"
+                type="email"
+                value={testerEmail}
+                onChange={(event) => setTesterEmail(event.target.value)}
+                className="w-full rounded-2xl border border-gray-200 dark:border-transparent bg-gray-50 dark:bg-[#232323] px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-400"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmittingIdentity}
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
             >
-              Name
-            </label>
-            <input
-              id="tester-name"
-              type="text"
-              value={testerName}
-              onChange={(event) => setTesterName(event.target.value)}
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]"
-              required
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="tester-email"
-              className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-            >
-              Email
-            </label>
-            <input
-              id="tester-email"
-              type="email"
-              value={testerEmail}
-              onChange={(event) => setTesterEmail(event.target.value)}
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmittingIdentity}
-            className="inline-flex w-full items-center justify-center rounded-2xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:bg-[var(--primary-dark)]"
+              {isSubmittingIdentity ? "Saving..." : "Save and Continue"}
+            </button>
+            {identityError ? <p className="text-xs font-medium text-red-500">{identityError}</p> : null}
+          </form>
+        </section>
+
+        <section className="mt-5 rounded-3xl border border-gray-200 dark:border-transparent bg-white dark:bg-[#1a1a1a] p-6 shadow-lg">
+          <h2 className="text-xl font-black text-gray-900 dark:text-white">What beta testers do</h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+            <li>Use MunchNow in real situations (when deciding where to eat)</li>
+            <li>Vote honestly on places: Worth it, Mid, or Skip</li>
+            <li>Share any issues or ideas you notice</li>
+          </ul>
+          <Link
+            href="/"
+            onClick={(event) => {
+              if (!identitySubmitted) {
+                event.preventDefault();
+                return;
+              }
+              trackEvent("beta_onboarding_open_app_clicked", {
+                tester_name: testerName || undefined,
+                tester_email: testerEmail || undefined,
+                onboarding_complete: true,
+              });
+            }}
+            className={`mt-5 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+              identitySubmitted
+                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                : "cursor-not-allowed bg-gray-200 dark:bg-[#262626] text-gray-500 dark:text-gray-400"
+            }`}
+            aria-disabled={!identitySubmitted}
           >
-            {isSubmittingIdentity ? "Saving..." : "Save and Continue"}
-          </button>
-          {identityError ? (
-            <p className="text-xs font-medium text-red-500">{identityError}</p>
-          ) : null}
-        </form>
-      </section>
+            Open MunchNow
+          </Link>
+        </section>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-xl font-semibold text-[var(--text)]">
-          Welcome to the MunchHSV Beta 🎉
-        </h2>
-        <p className="mt-3 text-sm text-[var(--text-muted)]">
-          Thanks for being selected as a beta tester for MunchHSV — a student-focused food discovery app built around real opinions, not ads.
-        </p>
-        <h3 className="mt-4 text-sm font-semibold text-[var(--text)]">
-          What being a beta tester means:
-        </h3>
-        <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[var(--text-muted)]">
-          <li>You’re getting early access before public launch</li>
-          <li>You’ll use MunchHSV naturally over the next few days</li>
-          <li>
-            Your votes and feedback directly shape what gets improved, added, or
-            removed
-          </li>
-        </ul>
-        <Link
-          href="/"
-          onClick={(event) => {
-            if (!identitySubmitted) {
-              event.preventDefault();
-              return;
+        <section className="mt-5 rounded-3xl border border-gray-200 dark:border-transparent bg-white dark:bg-[#1a1a1a] p-6 shadow-lg">
+          <h2 className="text-xl font-black text-gray-900 dark:text-white">Add to home screen</h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            On iPhone Safari: Share icon → Add to Home Screen.
+          </p>
+          <a
+            href="https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackEvent("beta_onboarding_apple_guide_clicked", {})}
+            className="mt-3 inline-block text-sm font-semibold text-indigo-600 dark:text-indigo-400 underline underline-offset-2"
+          >
+            Apple official guide
+          </a>
+        </section>
+
+        <section className="mt-5 rounded-3xl border border-gray-200 dark:border-transparent bg-white dark:bg-[#1a1a1a] p-6 shadow-lg">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Thanks for helping build something for students, by students.
+          </p>
+          <Link
+            href="/"
+            onClick={() =>
+              trackEvent("beta_onboarding_go_trending_clicked", {
+                tester_name: testerName || undefined,
+                tester_email: testerEmail || undefined,
+              })
             }
-            trackEvent("beta_onboarding_open_app_clicked", {
-              tester_name: testerName || undefined,
-              tester_email: testerEmail || undefined,
-              onboarding_complete: true,
-            });
-          }}
-          className={`mt-5 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold shadow-[var(--shadow-soft)] transition ${
-            identitySubmitted
-              ? "bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]"
-              : "cursor-not-allowed bg-[var(--surface-2)] text-[var(--text-muted)]"
-          }`}
-          aria-disabled={!identitySubmitted}
-        >
-          Open MunchHSV
-        </Link>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-xl font-semibold text-[var(--text)]">
-          Add MunchHSV to your home screen (recommended)
-        </h2>
-        <p className="mt-3 text-sm text-[var(--text-muted)]">
-          This makes it work like a real app and easier to open.
-        </p>
-        <h3 className="mt-4 text-sm font-semibold text-[var(--text)]">
-          On iPhone (Safari only):
-        </h3>
-        <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-[var(--text-muted)]">
-          <li>Open MunchHSV in Safari</li>
-          <li>Tap the Share icon (square with an arrow)</li>
-          <li>Scroll and tap ‘Add to Home Screen’</li>
-          <li>Tap Add</li>
-        </ol>
-        <p className="mt-4 text-sm text-[var(--text-muted)]">
-          Apple’s official step-by-step guide (with screenshots):
-        </p>
-        <a
-          href="https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => trackEvent("beta_onboarding_apple_guide_clicked", {})}
-          className="mt-2 inline-block break-all text-sm font-semibold text-[var(--primary)] underline underline-offset-2"
-        >
-          https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios
-        </a>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-xl font-semibold text-[var(--text)]">
-          How MunchHSV works (quick overview)
-        </h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--text-muted)]">
-          <li>Browse food spots near campus</li>
-          <li>Tap a place to see details and open it in Maps</li>
-          <li>Vote Worth it / Mid / Skip</li>
-          <li>Places trend based on real student votes — including yours</li>
-        </ul>
-        <p className="mt-4 text-sm text-[var(--text-muted)]">
-          Use it the same way you normally decide where to eat. No pressure to
-          overthink it. Just be honest.
-        </p>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
-        <p className="text-sm text-[var(--text-muted)]">
-          Thanks for helping build something for students, by students.
-        </p>
-        <Link
-          href="/"
-          onClick={() =>
-            trackEvent("beta_onboarding_go_trending_clicked", {
-              tester_name: testerName || undefined,
-              tester_email: testerEmail || undefined,
-            })
-          }
-          className="mt-5 inline-flex w-full items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--surface)]"
-        >
-          Go to Trending
-        </Link>
-      </section>
+            className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 dark:border-transparent bg-gray-100 dark:bg-[#262626] px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white transition hover:bg-gray-200 dark:hover:bg-[#2f2f2f]"
+          >
+            Go to Trending
+          </Link>
+        </section>
+      </div>
     </main>
   );
 }

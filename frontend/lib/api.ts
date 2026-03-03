@@ -40,11 +40,11 @@ type BetaTesterResponse = {
   source: string;
 };
 
-function buildUrl(path: string, params?: Record<string, string | number | undefined>) {
+function buildUrl(baseUrl: string, path: string, params?: Record<string, string | number | undefined>) {
   if (!BASE_URL) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
   }
-  const url = new URL(path, BASE_URL);
+  const url = new URL(path, baseUrl);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== "") {
@@ -55,6 +55,54 @@ function buildUrl(path: string, params?: Record<string, string | number | undefi
   return url.toString();
 }
 
+function buildCandidateBaseUrls() {
+  if (!BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
+  }
+  const candidates = [BASE_URL];
+  try {
+    const parsed = new URL(BASE_URL);
+    if (parsed.hostname === "127.0.0.1") {
+      parsed.hostname = "localhost";
+      candidates.push(parsed.toString().replace(/\/$/, ""));
+    } else if (parsed.hostname === "localhost") {
+      parsed.hostname = "127.0.0.1";
+      candidates.push(parsed.toString().replace(/\/$/, ""));
+    }
+  } catch {
+    // Keep original BASE_URL candidate only.
+  }
+  return Array.from(new Set(candidates));
+}
+
+function buildCandidateUrls(
+  path: string,
+  params?: Record<string, string | number | undefined>
+) {
+  return buildCandidateBaseUrls().map((baseUrl) => buildUrl(baseUrl, path, params));
+}
+
+async function fetchWithHostFallback(
+  path: string,
+  init: RequestInit,
+  params?: Record<string, string | number | undefined>
+) {
+  const urls = buildCandidateUrls(path, params);
+  let lastError: unknown = null;
+
+  for (const url of urls) {
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(
+    `Network request failed for ${path} via ${urls.join(" | ")}${lastError ? `: ${String(lastError)}` : ""}`
+  );
+}
+
 function normalizePlaces(data: unknown): Place[] {
   if (Array.isArray(data)) {
     return assertPlacesShape(data as Place[]);
@@ -63,6 +111,18 @@ function normalizePlaces(data: unknown): Place[] {
     const obj = data as Record<string, unknown>;
     if (Array.isArray(obj.places)) return assertPlacesShape(obj.places as Place[]);
     if (Array.isArray(obj.results)) return assertPlacesShape(obj.results as Place[]);
+  }
+  return [];
+}
+
+function normalizeCampuses(data: unknown): Campus[] {
+  if (Array.isArray(data)) return data as Campus[];
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj.campuses)) return obj.campuses as Campus[];
+    if (Array.isArray(obj.campus)) return obj.campus as Campus[];
+    if (Array.isArray(obj.results)) return obj.results as Campus[];
+    if (Array.isArray(obj.data)) return obj.data as Campus[];
   }
   return [];
 }
@@ -87,29 +147,31 @@ function assertPlacesShape(places: Place[]): Place[] {
 }
 
 export async function getCampuses(): Promise<Campus[]> {
-  const url = buildUrl("/campuses");
-  const res = await fetch(url, { method: "GET" });
+  const res = await fetchWithHostFallback("/campuses", { method: "GET" });
   if (!res.ok) {
     throw new Error("Failed to load campuses");
   }
-  const data = await res.json();
-  if (data && typeof data === "object" && Array.isArray(data.campuses)) {
-    return data.campuses as Campus[];
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(`Invalid campuses response type: ${contentType || "unknown"}`);
   }
-  return [];
+  const data = await res.json();
+  return normalizeCampuses(data);
 }
 
 export async function getTrending(params: TrendingParams): Promise<Place[]> {
-  const url = buildUrl("/trending", {
-    campus_id: resolveCampusId(params.campusId),
-    city: params.city,
-    category: params.category,
-    time_window: params.time_window,
-    limit: params.limit,
-    sort: params.sort,
-  });
-
-  const res = await fetch(url, { method: "GET" });
+  const res = await fetchWithHostFallback(
+    "/trending",
+    { method: "GET" },
+    {
+      campus_id: resolveCampusId(params.campusId),
+      city: params.city,
+      category: params.category,
+      time_window: params.time_window,
+      limit: params.limit,
+      sort: params.sort,
+    }
+  );
   if (!res.ok) {
     throw new Error("Failed to load trending places");
   }
@@ -124,15 +186,17 @@ export async function getPlaces(params: {
   sort?: "best" | "closest" | "trending";
   campusId?: number;
 }): Promise<Place[]> {
-  const url = buildUrl("/places", {
-    campus_id: resolveCampusId(params.campusId),
-    city: params.city,
-    category: params.category,
-    limit: params.limit,
-    sort: params.sort,
-  });
-
-  const res = await fetch(url, { method: "GET" });
+  const res = await fetchWithHostFallback(
+    "/places",
+    { method: "GET" },
+    {
+      campus_id: resolveCampusId(params.campusId),
+      city: params.city,
+      category: params.category,
+      limit: params.limit,
+      sort: params.sort,
+    }
+  );
   if (!res.ok) {
     throw new Error("Failed to load places");
   }
@@ -140,9 +204,33 @@ export async function getPlaces(params: {
   return normalizePlaces(data);
 }
 
+export async function getPlaceById(params: {
+  id: PlaceId;
+  campusId?: number;
+}): Promise<Place> {
+  const res = await fetchWithHostFallback(
+    `/places/${params.id}`,
+    { method: "GET" },
+    {
+      campus_id: resolveCampusId(params.campusId),
+    }
+  );
+  if (!res.ok) {
+    throw new Error("Failed to load place");
+  }
+  const data = (await res.json()) as unknown;
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (obj.place && typeof obj.place === "object") {
+      const places = assertPlacesShape([obj.place as Place]);
+      if (places[0]) return places[0];
+    }
+  }
+  throw new Error("Invalid place payload");
+}
+
 export async function submitVote(payload: VotePayload): Promise<VoteResponse> {
-  const url = buildUrl("/votes");
-  const res = await fetch(url, {
+  const res = await fetchWithHostFallback("/votes", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -162,8 +250,7 @@ export async function submitVote(payload: VotePayload): Promise<VoteResponse> {
 export async function submitBetaTester(
   payload: BetaTesterPayload
 ): Promise<BetaTesterResponse> {
-  const url = buildUrl("/beta/testers");
-  const res = await fetch(url, {
+  const res = await fetchWithHostFallback("/beta/testers", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

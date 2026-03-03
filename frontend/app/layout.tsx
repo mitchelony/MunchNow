@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Providers } from "./providers";
 import PageViewTracker from "./PageViewTracker";
+import RouteTransition from "./RouteTransition";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -71,7 +72,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <PageViewTracker />
           </Suspense>
-          {children}
+          <RouteTransition>{children}</RouteTransition>
         </Providers>
         <Analytics />
       </body>
