@@ -189,6 +189,11 @@ Required env (`backend/.env`):
 - `SUPABASE_ANON_KEY` (kept for compatibility)
 - `ENVIRONMENT` (optional)
 - `YELP_API_KEY` (only for Yelp enrichment script)
+- `GOOGLE_MAPS_API_KEY` (server-side only; used for Google Places photo ingestion)
+
+Optional local override:
+
+- `backend/.env.local` is loaded after `backend/.env` and can override values for local dev.
 
 ### Frontend
 
@@ -252,11 +257,13 @@ Script behavior:
 
 - Build command: `npm run build`
 - Ensure frontend env vars are set in Vercel project settings
+- If backend code is deployed on Vercel server runtime, set `GOOGLE_MAPS_API_KEY` as a server env var (never as `NEXT_PUBLIC_*`)
 
 ### Backend (Render)
 
 - Start command should run FastAPI on Render port
 - Ensure backend env vars are set in Render
+- Add `GOOGLE_MAPS_API_KEY` in Render environment variables
 - Render free tier can sleep when inactive; app behavior should tolerate cold starts
 
 ## Quick troubleshooting

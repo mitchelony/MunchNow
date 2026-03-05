@@ -2,6 +2,7 @@ from dotenv import load_dotenv  # type: ignore
 
 # Load environment variables early, before importing any modules that depend on them.
 load_dotenv()
+load_dotenv(".env.local", override=True)
 
 from fastapi import FastAPI #type: ignore
 from fastapi.middleware.cors import CORSMiddleware #type: ignore

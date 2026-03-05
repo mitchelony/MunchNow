@@ -1,0 +1,4 @@
+place_id,place_name,old_photo_url,new_photo_url,status,notes
+60,McDonald's,https://s3-media0.fl.yelpcdn.com/bphoto/c6pU_frrYYNrr2G6-QGcjQ/o.jpg,https://dzjxgkzmxpdbqwarqzsa.supabase.co/storage/v1/object/public/place-photos/places/60/cover.jpg,updated,ok
+61,Popeyes Louisiana Kitchen,https://s3-media0.fl.yelpcdn.com/bphoto/NxG11zpnN1IZSkl8CxkilA/o.jpg,https://dzjxgkzmxpdbqwarqzsa.supabase.co/storage/v1/object/public/place-photos/places/61/cover.jpg,updated,ok
+68,Jack in the Box,https://s3-media0.fl.yelpcdn.com/bphoto/vXGArVSZ3avSV5VRCXODbg/o.jpg,,failed,candidate_taken:ChIJjYD7o45rYogRIaKgcS6tmfk:owner=52
