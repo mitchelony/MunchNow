@@ -428,7 +428,7 @@ export default function PlacePage() {
                     className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
                       activeVote === "worth_it"
                         ? "border-emerald-500 bg-emerald-500/30 text-white"
-                        : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-emerald-500/20"
+                        : "border-gray-200 bg-gray-50 text-gray-900 hover:bg-emerald-500/15 dark:border-white/10 dark:bg-[#181a21] dark:text-slate-100 dark:hover:bg-emerald-500/20"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px] leading-none">thumb_up</span>
@@ -441,7 +441,7 @@ export default function PlacePage() {
                     className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
                       activeVote === "mid"
                         ? "border-amber-500 bg-amber-500/30 text-white"
-                        : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-amber-500/20"
+                        : "border-gray-200 bg-gray-50 text-gray-900 hover:bg-amber-500/15 dark:border-white/10 dark:bg-[#181a21] dark:text-slate-100 dark:hover:bg-amber-500/20"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px] leading-none">remove</span>
@@ -454,7 +454,7 @@ export default function PlacePage() {
                     className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
                       activeVote === "skip"
                         ? "border-rose-500 bg-rose-500/30 text-white"
-                        : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-rose-500/20"
+                        : "border-gray-200 bg-gray-50 text-gray-900 hover:bg-rose-500/15 dark:border-white/10 dark:bg-[#181a21] dark:text-slate-100 dark:hover:bg-rose-500/20"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px] leading-none">thumb_down</span>
