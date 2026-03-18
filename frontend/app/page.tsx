@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
+import { HomeFeedSkeleton, PullToRefreshIndicator } from "../components/Skeleton";
 import ThemeToggle from "../components/ThemeToggle";
 import AppNav from "../components/redesign/AppNav";
 import CampusPickerModal from "../components/redesign/CampusPickerModal";
@@ -21,6 +22,7 @@ import {
   saveVoteRecord,
   type StoredVoteRecord,
 } from "../lib/voteCooldown";
+import { usePullToRefresh } from "../lib/usePullToRefresh";
 
 const CATEGORIES = [
   "All",
@@ -106,6 +108,8 @@ export default function HomePage() {
   const [voteRecords, setVoteRecords] = useState<Record<string, StoredVoteRecord>>({});
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [refreshing, setRefreshing] = useState(false);
+  const requestIdRef = useRef(0);
 
   const selectedCampus = useMemo(
     () => campuses.find((campus) => campus.id === campusId) ?? null,
@@ -155,17 +159,49 @@ export default function HomePage() {
     };
   }, [campusId]);
 
+  const refreshPlaces = useEffectEvent(async () => {
+    if (!campusId) return;
+    const requestId = ++requestIdRef.current;
+    setRefreshing(true);
+    setError(null);
+    try {
+      const data = await getTrending({
+        campusId,
+        city: selectedCampus?.city ?? "Huntsville",
+        category: categoryParam,
+        time_window: "7d",
+        limit: 20,
+        sort: "trending",
+      });
+      if (requestId !== requestIdRef.current) return;
+      setPlaces(data);
+    } catch {
+      if (requestId !== requestIdRef.current) return;
+      setError("Could not refresh places.");
+    } finally {
+      if (requestId !== requestIdRef.current) return;
+      setRefreshing(false);
+    }
+  });
+
   useEffect(() => {
     let isActive = true;
+    const requestId = ++requestIdRef.current;
+
     if (!campusId) {
+      setPlaces([]);
       setLoading(false);
+      setRefreshing(false);
       return () => {
         isActive = false;
       };
     }
 
     setLoading(true);
+    setRefreshing(false);
+    setPlaces([]);
     setError(null);
+
     getTrending({
       campusId,
       city: selectedCampus?.city ?? "Huntsville",
@@ -175,13 +211,17 @@ export default function HomePage() {
       sort: "trending",
     })
       .then((data) => {
-        if (isActive) setPlaces(data);
+        if (!isActive || requestId !== requestIdRef.current) return;
+        setPlaces(data);
       })
       .catch(() => {
-        if (isActive) setError("Could not load places.");
+        if (!isActive || requestId !== requestIdRef.current) return;
+        setPlaces([]);
+        setError("Could not load places.");
       })
       .finally(() => {
-        if (isActive) setLoading(false);
+        if (!isActive || requestId !== requestIdRef.current) return;
+        setLoading(false);
       });
 
     return () => {
@@ -226,6 +266,10 @@ export default function HomePage() {
     ["--primary-dark" as string]: theme.dark,
     ["--primary-soft" as string]: theme.light,
   };
+  const { isArmed, isRefreshing, pullDistance } = usePullToRefresh({
+    disabled: loading || !campusId || campusPickerOpen || !!selectedPlaceId,
+    onRefresh: refreshPlaces,
+  });
 
   const handleSelectCampus = (id: number) => {
     setCampusId(id);
@@ -236,83 +280,105 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-32" style={themeStyle}>
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur border-b border-gray-100 dark:border-transparent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: theme.primary }}>
-                MunchNow
-              </h1>
-              <button
-                type="button"
-                onClick={() => setCampusPickerOpen(true)}
-                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-400"
-              >
-                <span className="material-symbols-outlined text-[16px]">location_on</span>
-                {selectedCampus?.short_name ?? selectedCampus?.name ?? "Pick campus"}
-                <span className="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <AppNav
-                active="discover"
-                accentFrom={theme.primary}
-                accentTo={theme.dark}
-                glowColor={theme.primary}
-                showMobile={false}
-              />
-              <ThemeToggle />
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 pb-32 dark:bg-[#0a0a0a]" style={themeStyle}>
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        isRefreshing={isRefreshing || refreshing}
+        isArmed={isArmed}
+      />
 
-          <div className="flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide pb-1 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {CATEGORIES.map((category) => {
-              const isActive = selectedCategory === category;
-              return (
+      <div
+        style={{
+          transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+          transition: pullDistance > 0 ? "none" : "transform 180ms ease-out",
+        }}
+      >
+        <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur dark:border-transparent dark:bg-[#1a1a1a]/95">
+          <div className="mx-auto max-w-7xl space-y-3 px-4 py-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-black tracking-tight sm:text-3xl" style={{ color: theme.primary }}>
+                  MunchNow
+                </h1>
                 <button
-                  key={category}
                   type="button"
-                  onClick={() => setSelectedCategory(category)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold border transition ${
-                    isActive
-                      ? "text-white border-transparent"
-                      : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-transparent"
-                  }`}
-                  style={
-                    isActive
-                      ? {
-                          background: `linear-gradient(135deg, ${theme.primary}, ${theme.dark})`,
-                          boxShadow: `0 0 30px ${theme.primary}88, 0 0 58px ${theme.primary}38, 0 4px 16px ${theme.primary}33`,
-                        }
-                      : undefined
-                  }
+                  onClick={() => setCampusPickerOpen(true)}
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-400"
                 >
-                  {category}
+                  <span className="material-symbols-outlined text-[16px]">location_on</span>
+                  {selectedCampus?.short_name ?? selectedCampus?.name ?? "Pick campus"}
+                  <span className="material-symbols-outlined text-[16px]">expand_more</span>
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      </header>
+              </div>
+              <div className="flex items-center gap-2">
+                <AppNav
+                  active="discover"
+                  accentFrom={theme.primary}
+                  accentTo={theme.dark}
+                  glowColor={theme.primary}
+                  showMobile={false}
+                />
+                <ThemeToggle />
+              </div>
+            </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-64 rounded-3xl skeleton-shimmer" />
-            ))}
+            <div className="scrollbar-hide -mx-4 flex gap-2 overflow-x-auto overflow-y-hidden px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {CATEGORIES.map((category) => {
+                const isActive = selectedCategory === category;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setSelectedCategory(category)}
+                    className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs font-bold transition ${
+                      isActive
+                        ? "border-transparent text-white"
+                        : "border-gray-200 bg-white text-gray-600 dark:border-transparent dark:bg-[#222] dark:text-gray-300"
+                    }`}
+                    style={
+                      isActive
+                        ? {
+                            background: `linear-gradient(135deg, ${theme.primary}, ${theme.dark})`,
+                            boxShadow: `0 0 30px ${theme.primary}88, 0 0 58px ${theme.primary}38, 0 4px 16px ${theme.primary}33`,
+                          }
+                        : undefined
+                    }
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        ) : error ? (
-          <div className="rounded-3xl bg-white dark:bg-[#1a1a1a] p-5 text-sm text-gray-600 dark:text-gray-300">
-            {error}
-          </div>
-        ) : places.length === 0 ? (
-          <div className="rounded-3xl bg-white dark:bg-[#1a1a1a] p-5 text-sm text-gray-600 dark:text-gray-300">
-            No places yet.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        </header>
+
+        <main className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+          {refreshing && places.length > 0 ? (
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/80 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm backdrop-blur dark:border-white/10 dark:bg-[#17181f]/80 dark:text-slate-200">
+              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+              Refreshing picks
+            </div>
+          ) : null}
+
+          {loading ? (
+            <HomeFeedSkeleton />
+          ) : error && places.length === 0 ? (
+            <div className="rounded-3xl bg-white p-5 text-sm text-gray-600 dark:bg-[#1a1a1a] dark:text-gray-300">
+              {error}
+            </div>
+          ) : places.length === 0 ? (
+            <div className="rounded-3xl bg-white p-5 text-sm text-gray-600 dark:bg-[#1a1a1a] dark:text-gray-300">
+              No places yet.
+            </div>
+          ) : (
+            <>
+              {error ? (
+                <div className="mb-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
             {places.map((place, index) => {
               const votes = computeVoteCounts(place);
               const chips = extractCategoryChips(place, 2);
@@ -446,9 +512,11 @@ export default function HomePage() {
                 </article>
               );
             })}
-          </div>
-        )}
-      </main>
+              </div>
+            </>
+          )}
+        </main>
+      </div>
 
       {campusPickerOpen ? (
         <CampusPickerModal

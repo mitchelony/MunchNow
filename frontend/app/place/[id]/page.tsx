@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { PlaceDetailSkeleton, PullToRefreshIndicator } from "../../../components/Skeleton";
 import {
   getCampuses,
   getOrCreateSessionId,
@@ -13,6 +14,7 @@ import { trackEvent } from "../../../lib/analytics";
 import { buildMapsQuery, getPreferredMapsLink, isIOS } from "../../../lib/maps";
 import { extractCategoryChips } from "../../../lib/tags";
 import type { Campus, Place, VoteValue } from "../../../lib/types";
+import { usePullToRefresh } from "../../../lib/usePullToRefresh";
 
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const COOLDOWN_KEY = "munch_vote_cooldowns";
@@ -75,6 +77,9 @@ export default function PlacePage() {
   const [activeVote, setActiveVote] = useState<VoteValue | null>(null);
   const [voteCooldowns, setVoteCooldowns] = useState<Record<string, number>>({});
   const [now, setNow] = useState(() => Date.now());
+  const [refreshing, setRefreshing] = useState(false);
+  const requestIdRef = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const numericPlaceId = useMemo(() => {
     const raw = Array.isArray(params?.id) ? params.id[0] : params?.id;
@@ -141,9 +146,29 @@ export default function PlacePage() {
     [campuses, campusId]
   );
 
+  const refreshPlace = useEffectEvent(async () => {
+    if (!numericPlaceId || !campusId) return;
+    const requestId = ++requestIdRef.current;
+    setRefreshing(true);
+    setError(null);
+    try {
+      const data = await getPlaceById({ id: numericPlaceId, campusId });
+      if (requestId !== requestIdRef.current) return;
+      setPlace(data);
+    } catch {
+      if (requestId !== requestIdRef.current) return;
+      setError("Could not refresh this place.");
+    } finally {
+      if (requestId !== requestIdRef.current) return;
+      setRefreshing(false);
+    }
+  });
+
   useEffect(() => {
     let isActive = true;
+    const requestId = ++requestIdRef.current;
     if (!numericPlaceId) {
+      setPlace(null);
       setLoading(false);
       setError("Invalid place id.");
       return () => {
@@ -159,11 +184,13 @@ export default function PlacePage() {
     }
 
     setLoading(true);
+    setRefreshing(false);
+    setPlace(null);
     setError(null);
 
     getPlaceById({ id: numericPlaceId, campusId })
       .then((data) => {
-        if (!isActive) return;
+        if (!isActive || requestId !== requestIdRef.current) return;
         setPlace(data);
         trackEvent("place_clicked", {
           place_id: data.id,
@@ -171,12 +198,13 @@ export default function PlacePage() {
         });
       })
       .catch(() => {
-        if (!isActive) return;
+        if (!isActive || requestId !== requestIdRef.current) return;
         setPlace(null);
         setError("Could not load this place.");
       })
       .finally(() => {
-        if (isActive) setLoading(false);
+        if (!isActive || requestId !== requestIdRef.current) return;
+        setLoading(false);
       });
 
     return () => {
@@ -245,16 +273,17 @@ export default function PlacePage() {
       provider: isIOS() ? "apple" : "google",
     });
   };
+  const { isArmed, isRefreshing, pullDistance } = usePullToRefresh({
+    disabled: loading || !place,
+    getScrollTop: () => scrollContainerRef.current?.scrollTop ?? window.scrollY,
+    onRefresh: refreshPlace,
+  });
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#101114] p-6">
-        <div className="mx-auto max-w-7xl h-[85vh] rounded-[28px] skeleton-shimmer" />
-      </div>
-    );
+    return <PlaceDetailSkeleton />;
   }
 
-  if (!place || error || !voteCounts) {
+  if (!place || !voteCounts) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center justify-center gap-4 px-6 text-center">
         <h1 className="text-2xl font-semibold text-[var(--text)]">{error ?? "Place not found"}</h1>
@@ -277,148 +306,177 @@ export default function PlacePage() {
 
   return (
     <div className="min-h-screen bg-[#0b0c10] px-2 py-2 text-white sm:px-4 sm:py-4">
-      <div className="mx-auto flex h-[calc(100vh-0.75rem)] max-h-[860px] w-full max-w-[1320px] flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[#161820] shadow-[0_20px_70px_rgba(0,0,0,0.58)]">
-        <div className="flex items-center justify-end border-b border-white/5 px-4 py-3 sm:px-6">
-          <button
-            type="button"
-            onClick={() => window.history.back()}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1e2a40] text-slate-300 transition hover:text-white"
-            aria-label="Close"
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        isRefreshing={isRefreshing || refreshing}
+        isArmed={isArmed}
+      />
+      <div
+        style={{
+          transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+          transition: pullDistance > 0 ? "none" : "transform 180ms ease-out",
+        }}
+      >
+        <div className="mx-auto flex h-[calc(100vh-0.75rem)] max-h-[860px] w-full max-w-[1320px] flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[#161820] shadow-[0_20px_70px_rgba(0,0,0,0.58)]">
+          <div className="flex items-center justify-between border-b border-white/5 px-4 py-3 sm:px-6">
+            <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+              {refreshing ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  Refreshing
+                </>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1e2a40] text-slate-300 transition hover:text-white"
+              aria-label="Close"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-5 sm:pt-4 md:px-7"
           >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
+            <div className="mx-auto max-w-[1160px] text-center">
+              {error ? (
+                <div className="mb-4 rounded-2xl border border-amber-400/15 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-100">
+                  {error}
+                </div>
+              ) : null}
 
-        <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-5 sm:pt-4 md:px-7">
-          <div className="mx-auto max-w-[1160px] text-center">
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{place.name}</h1>
-            <p className="mt-1 text-sm font-semibold text-slate-400 sm:text-lg">{cuisineLabel}</p>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{place.name}</h1>
+              <p className="mt-1 text-sm font-semibold text-slate-400 sm:text-lg">{cuisineLabel}</p>
 
-            <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/20 px-2.5 py-1 text-xs font-semibold text-blue-300 sm:text-sm">
-                <span className="material-symbols-outlined text-[14px]">location_on</span>
-                {formatDistance(place.distance_miles)}
-              </span>
-              <span className="inline-flex items-center rounded-full bg-emerald-600/20 px-3 py-1 text-base font-bold text-emerald-300 sm:text-lg">
-                {formatPrice(place.price_tier)}
-              </span>
-            </div>
-
-            <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
-              {displayTags.map((chip) => (
-                <span
-                  key={chip}
-                  className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200 sm:text-sm"
-                >
-                  {toDisplayLabel(chip).toLowerCase()}
+              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/20 px-2.5 py-1 text-xs font-semibold text-blue-300 sm:text-sm">
+                  <span className="material-symbols-outlined text-[14px]">location_on</span>
+                  {formatDistance(place.distance_miles)}
                 </span>
-              ))}
-            </div>
-
-            <h2 className="mt-4 text-xl font-extrabold sm:text-3xl">Community Verdict</h2>
-
-            <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-3">
-              <div className="rounded-[18px] bg-gradient-to-br from-emerald-950/55 to-emerald-700/20 p-3.5 md:p-4">
-                <span className="material-symbols-outlined text-[24px] text-emerald-400">thumb_up</span>
-                <p className="mt-1.5 text-3xl font-extrabold leading-none text-emerald-400 md:text-4xl">{voteCounts.worth}</p>
-                <p className="mt-1 text-lg font-bold text-emerald-400 md:text-xl">Worth It</p>
+                <span className="inline-flex items-center rounded-full bg-emerald-600/20 px-3 py-1 text-base font-bold text-emerald-300 sm:text-lg">
+                  {formatPrice(place.price_tier)}
+                </span>
               </div>
-              <div className="rounded-[18px] bg-gradient-to-br from-amber-950/55 to-amber-700/20 p-3.5 md:p-4">
-                <span className="material-symbols-outlined text-[24px] text-amber-400">remove</span>
-                <p className="mt-1.5 text-3xl font-extrabold leading-none text-amber-400 md:text-4xl">{voteCounts.mid}</p>
-                <p className="mt-1 text-lg font-bold text-amber-400 md:text-xl">Mid</p>
-              </div>
-              <div className="rounded-[18px] bg-gradient-to-br from-rose-950/55 to-rose-700/20 p-3.5 md:p-4">
-                <span className="material-symbols-outlined text-[24px] text-rose-400">thumb_down</span>
-                <p className="mt-1.5 text-3xl font-extrabold leading-none text-rose-400 md:text-4xl">{voteCounts.skip}</p>
-                <p className="mt-1 text-lg font-bold text-rose-400 md:text-xl">Skip</p>
-              </div>
-            </div>
 
-            <div className="mt-3">
-              <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-slate-300 sm:text-sm">
-                <span>{recommendPercent}% recommend</span>
-                <span>{voteCounts.total} total votes</span>
+              <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
+                {displayTags.map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200 sm:text-sm"
+                  >
+                    {toDisplayLabel(chip).toLowerCase()}
+                  </span>
+                ))}
               </div>
-              <div className="h-2.5 rounded-full bg-slate-600/50">
-                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${recommendPercent}%` }} />
-              </div>
-            </div>
 
-            <h3 className="mt-4 text-xl font-extrabold sm:text-2xl">Location</h3>
-            <p className="mt-1 text-sm text-slate-300 sm:text-lg">{place.address ?? "Address unavailable"}</p>
+              <h2 className="mt-4 text-xl font-extrabold sm:text-3xl">Community Verdict</h2>
 
-            <h3 className="mt-4 text-xl font-extrabold sm:text-2xl">Cast Your Vote</h3>
-
-            {remaining > 0 ? (
-              <div className="mt-2.5 rounded-[16px] bg-gradient-to-r from-indigo-950/70 to-blue-950/55 px-3.5 py-2.5 text-left">
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-2xl text-white">check</span>
-                  <div>
-                    <p className="text-lg font-extrabold text-white sm:text-xl">Vote Recorded!</p>
-                    <p className="text-xs font-semibold text-slate-300 sm:text-base">
-                      Next vote: <span className="text-blue-400">{formatRemaining(remaining)}</span>
-                    </p>
-                  </div>
+              <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-3">
+                <div className="rounded-[18px] bg-gradient-to-br from-emerald-950/55 to-emerald-700/20 p-3.5 md:p-4">
+                  <span className="material-symbols-outlined text-[24px] text-emerald-400">thumb_up</span>
+                  <p className="mt-1.5 text-3xl font-extrabold leading-none text-emerald-400 md:text-4xl">{voteCounts.worth}</p>
+                  <p className="mt-1 text-lg font-bold text-emerald-400 md:text-xl">Worth It</p>
+                </div>
+                <div className="rounded-[18px] bg-gradient-to-br from-amber-950/55 to-amber-700/20 p-3.5 md:p-4">
+                  <span className="material-symbols-outlined text-[24px] text-amber-400">remove</span>
+                  <p className="mt-1.5 text-3xl font-extrabold leading-none text-amber-400 md:text-4xl">{voteCounts.mid}</p>
+                  <p className="mt-1 text-lg font-bold text-amber-400 md:text-xl">Mid</p>
+                </div>
+                <div className="rounded-[18px] bg-gradient-to-br from-rose-950/55 to-rose-700/20 p-3.5 md:p-4">
+                  <span className="material-symbols-outlined text-[24px] text-rose-400">thumb_down</span>
+                  <p className="mt-1.5 text-3xl font-extrabold leading-none text-rose-400 md:text-4xl">{voteCounts.skip}</p>
+                  <p className="mt-1 text-lg font-bold text-rose-400 md:text-xl">Skip</p>
                 </div>
               </div>
-            ) : (
-              <div className="mt-2.5 grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  disabled={voteSubmitting}
-                  onClick={() => handleVote("worth_it")}
-                  className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
-                    activeVote === "worth_it"
-                      ? "border-emerald-500 bg-emerald-500/30 text-white"
-                      : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-emerald-500/20"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px] leading-none">thumb_up</span>
-                  Worth It
-                </button>
-                <button
-                  type="button"
-                  disabled={voteSubmitting}
-                  onClick={() => handleVote("mid")}
-                  className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
-                    activeVote === "mid"
-                      ? "border-amber-500 bg-amber-500/30 text-white"
-                      : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-amber-500/20"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px] leading-none">remove</span>
-                  Mid
-                </button>
-                <button
-                  type="button"
-                  disabled={voteSubmitting}
-                  onClick={() => handleVote("skip")}
-                  className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
-                    activeVote === "skip"
-                      ? "border-rose-500 bg-rose-500/30 text-white"
-                      : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-rose-500/20"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px] leading-none">thumb_down</span>
-                  Skip
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
 
-        <div className="border-t border-white/5 bg-black/20 p-3">
-          <button
-            type="button"
-            onClick={handleOpenMaps}
-            className="w-full rounded-[14px] bg-gradient-to-r from-[#2b69ff] to-[#5645ff] px-4 py-2.5 text-base font-bold text-white transition hover:brightness-110 sm:text-xl"
-          >
-            <span className="inline-flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">location_on</span>
-              Get Directions
-            </span>
-          </button>
+              <div className="mt-3">
+                <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-slate-300 sm:text-sm">
+                  <span>{recommendPercent}% recommend</span>
+                  <span>{voteCounts.total} total votes</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-slate-600/50">
+                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${recommendPercent}%` }} />
+                </div>
+              </div>
+
+              <h3 className="mt-4 text-xl font-extrabold sm:text-2xl">Location</h3>
+              <p className="mt-1 text-sm text-slate-300 sm:text-lg">{place.address ?? "Address unavailable"}</p>
+
+              <h3 className="mt-4 text-xl font-extrabold sm:text-2xl">Cast Your Vote</h3>
+
+              {remaining > 0 ? (
+                <div className="mt-2.5 rounded-[16px] bg-gradient-to-r from-indigo-950/70 to-blue-950/55 px-3.5 py-2.5 text-left">
+                  <div className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-2xl text-white">check</span>
+                    <div>
+                      <p className="text-lg font-extrabold text-white sm:text-xl">Vote Recorded!</p>
+                      <p className="text-xs font-semibold text-slate-300 sm:text-base">
+                        Next vote: <span className="text-blue-400">{formatRemaining(remaining)}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2.5 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    disabled={voteSubmitting}
+                    onClick={() => handleVote("worth_it")}
+                    className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
+                      activeVote === "worth_it"
+                        ? "border-emerald-500 bg-emerald-500/30 text-white"
+                        : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-emerald-500/20"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px] leading-none">thumb_up</span>
+                    Worth It
+                  </button>
+                  <button
+                    type="button"
+                    disabled={voteSubmitting}
+                    onClick={() => handleVote("mid")}
+                    className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
+                      activeVote === "mid"
+                        ? "border-amber-500 bg-amber-500/30 text-white"
+                        : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-amber-500/20"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px] leading-none">remove</span>
+                    Mid
+                  </button>
+                  <button
+                    type="button"
+                    disabled={voteSubmitting}
+                    onClick={() => handleVote("skip")}
+                    className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition sm:text-xs ${
+                      activeVote === "skip"
+                        ? "border-rose-500 bg-rose-500/30 text-white"
+                        : "border-white/10 bg-[#181a21] text-slate-100 hover:bg-rose-500/20"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px] leading-none">thumb_down</span>
+                    Skip
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-white/5 bg-black/20 p-3">
+            <button
+              type="button"
+              onClick={handleOpenMaps}
+              className="w-full rounded-[14px] bg-gradient-to-r from-[#2b69ff] to-[#5645ff] px-4 py-2.5 text-base font-bold text-white transition hover:brightness-110 sm:text-xl"
+            >
+              <span className="inline-flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">location_on</span>
+                Get Directions
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
