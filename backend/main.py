@@ -41,10 +41,15 @@ async def lifespan(app: FastAPI):
             ", ".join(missing),
         )
     else:
-        create_email_log_table()
-        scheduler = start_scheduler()
-        app.state.beta_scheduler = scheduler
-        app.state.beta_email_enabled = True
+        try:
+            create_email_log_table()
+            scheduler = start_scheduler()
+            app.state.beta_scheduler = scheduler
+            app.state.beta_email_enabled = True
+        except Exception:
+            logger.exception(
+                "Beta email automation disabled due to startup failure"
+            )
     try:
         yield
     finally:
