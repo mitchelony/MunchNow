@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS beta_email_log (
 """
 
 
+def has_database_url() -> bool:
+    return bool(os.getenv("DATABASE_URL"))
+
+
 def get_connection():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -154,4 +158,3 @@ def mark_email_sent(tester_id: int, email: str, email_type: str) -> None:
             cursor.close()
         if connection is not None:
             connection.close()
-

@@ -6,6 +6,10 @@ import resend
 logger = logging.getLogger(__name__)
 
 
+def is_mailer_configured() -> bool:
+    return bool(os.getenv("RESEND_API_KEY")) and bool(os.getenv("FROM_EMAIL"))
+
+
 def send_email(to: str, subject: str, html: str) -> bool:
     api_key = os.getenv("RESEND_API_KEY")
     from_email = os.getenv("FROM_EMAIL")
@@ -32,4 +36,3 @@ def send_email(to: str, subject: str, html: str) -> bool:
     except Exception:
         logger.exception("Failed to send email to %s", to)
         return False
-
