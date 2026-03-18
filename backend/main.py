@@ -18,13 +18,13 @@ from beta.scheduler import (
     poll_and_send_acceptance_emails,
     start_scheduler,
 )
-from core.database import create_email_log_table, has_database_url
+from core.database import create_email_log_table, has_supabase_database_config
 
 logger = logging.getLogger(__name__)
 
 
 def _beta_email_system_enabled() -> bool:
-    return has_database_url() and is_mailer_configured()
+    return has_supabase_database_config() and is_mailer_configured()
 
 
 @asynccontextmanager
@@ -32,7 +32,13 @@ async def lifespan(app: FastAPI):
     scheduler = None
     app.state.beta_email_enabled = False
     missing = [
-        name for name in ("DATABASE_URL", "RESEND_API_KEY", "FROM_EMAIL")
+        name
+        for name in (
+            "SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "RESEND_API_KEY",
+            "FROM_EMAIL",
+        )
         if not os.getenv(name)
     ]
     if missing:

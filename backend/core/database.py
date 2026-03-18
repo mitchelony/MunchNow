@@ -1,122 +1,86 @@
 import logging
 import os
+from datetime import UTC, datetime, timedelta
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from app.db.client import get_supabase
 
 logger = logging.getLogger(__name__)
 
-
-CREATE_BETA_EMAIL_LOG_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS beta_email_log (
-    id          SERIAL PRIMARY KEY,
-    tester_id   INTEGER NOT NULL,
-    email       TEXT NOT NULL,
-    email_type  TEXT NOT NULL,
-    sent_at     TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE (tester_id, email_type)
-);
-"""
+try:
+    from postgrest.exceptions import APIError
+except Exception:  # pragma: no cover - local fallback when deps are absent
+    APIError = Exception
 
 
-def has_database_url() -> bool:
-    return bool(os.getenv("DATABASE_URL"))
+def has_supabase_database_config() -> bool:
+    return bool(os.getenv("SUPABASE_URL")) and bool(
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    )
 
 
-def get_connection():
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        message = "DATABASE_URL is not set"
-        logger.error(message)
-        raise ValueError(message)
-
+def _parse_created_at(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    normalized = value.replace("Z", "+00:00")
     try:
-        return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-    except Exception as exc:
-        logger.exception("Failed to connect to PostgreSQL using DATABASE_URL")
-        raise RuntimeError("Failed to connect to PostgreSQL") from exc
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        logger.warning("Unable to parse created_at value: %s", value)
+        return None
 
 
 def create_email_log_table() -> None:
-    connection = None
-    cursor = None
     try:
-        connection = get_connection()
-        cursor = connection.cursor()
-        cursor.execute(CREATE_BETA_EMAIL_LOG_TABLE_SQL)
-        connection.commit()
+        supabase = get_supabase()
+        supabase.table("beta_email_log").select("id").limit(1).execute()
     except Exception:
-        if connection is not None:
-            connection.rollback()
-        logger.exception("Failed to create beta_email_log table")
+        logger.exception("Failed to access beta_email_log via Supabase")
         raise
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if connection is not None:
-            connection.close()
 
 
 def fetch_testers_missing_email(email_type: str) -> list[dict]:
-    connection = None
-    cursor = None
-    query = """
-        SELECT
-            bt.id,
-            bt.name,
-            bt.email,
-            bt.source,
-            bt.created_at
-        FROM beta_testers bt
-        LEFT JOIN beta_email_log bel
-            ON bel.tester_id = bt.id
-           AND bel.email_type = %s
-        WHERE bel.id IS NULL
-        ORDER BY bt.created_at ASC, bt.id ASC;
-    """
     try:
-        connection = get_connection()
-        cursor = connection.cursor()
-        cursor.execute(query, (email_type,))
-        rows = cursor.fetchall()
-        return [dict(row) for row in rows]
+        supabase = get_supabase()
+        testers_response = (
+            supabase.table("beta_testers")
+            .select("id, name, email, source, created_at")
+            .order("created_at")
+            .order("id")
+            .execute()
+        )
+        email_log_response = (
+            supabase.table("beta_email_log")
+            .select("tester_id")
+            .eq("email_type", email_type)
+            .execute()
+        )
+        sent_tester_ids = {
+            row["tester_id"]
+            for row in (email_log_response.data or [])
+            if row.get("tester_id") is not None
+        }
+        testers = testers_response.data or []
+        return [
+            tester for tester in testers if tester.get("id") not in sent_tester_ids
+        ]
     except Exception:
         logger.exception(
             "Failed to fetch testers missing email_type=%s",
             email_type,
         )
         raise
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if connection is not None:
-            connection.close()
 
 
 def fetch_testers_due_for_interval(email_type: str, days: int) -> list[dict]:
-    connection = None
-    cursor = None
-    query = """
-        SELECT
-            bt.id,
-            bt.name,
-            bt.email,
-            bt.source,
-            bt.created_at
-        FROM beta_testers bt
-        LEFT JOIN beta_email_log bel
-            ON bel.tester_id = bt.id
-           AND bel.email_type = %s
-        WHERE bel.id IS NULL
-          AND bt.created_at <= NOW() - (%s * INTERVAL '1 day')
-        ORDER BY bt.created_at ASC, bt.id ASC;
-    """
     try:
-        connection = get_connection()
-        cursor = connection.cursor()
-        cursor.execute(query, (email_type, days))
-        rows = cursor.fetchall()
-        return [dict(row) for row in rows]
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        testers = fetch_testers_missing_email(email_type)
+        due_testers = []
+        for tester in testers:
+            created_at = _parse_created_at(tester.get("created_at"))
+            if created_at is not None and created_at <= cutoff:
+                due_testers.append(tester)
+        return due_testers
     except Exception:
         logger.exception(
             "Failed to fetch testers due for email_type=%s days=%s",
@@ -124,37 +88,36 @@ def fetch_testers_due_for_interval(email_type: str, days: int) -> list[dict]:
             days,
         )
         raise
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if connection is not None:
-            connection.close()
 
 
 def mark_email_sent(tester_id: int, email: str, email_type: str) -> None:
-    connection = None
-    cursor = None
-    query = """
-        INSERT INTO beta_email_log (tester_id, email, email_type)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (tester_id, email_type) DO NOTHING;
-    """
+    payload = {
+        "tester_id": tester_id,
+        "email": email,
+        "email_type": email_type,
+    }
     try:
-        connection = get_connection()
-        cursor = connection.cursor()
-        cursor.execute(query, (tester_id, email, email_type))
-        connection.commit()
-    except Exception:
-        if connection is not None:
-            connection.rollback()
+        supabase = get_supabase()
+        supabase.table("beta_email_log").insert(payload).execute()
+    except APIError as exc:
+        message = str(exc).lower()
+        if "duplicate key" in message or "23505" in message:
+            logger.info(
+                "Email log already exists for tester_id=%s email_type=%s",
+                tester_id,
+                email_type,
+            )
+            return
         logger.exception(
             "Failed to mark email as sent for tester_id=%s email_type=%s",
             tester_id,
             email_type,
         )
         raise
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if connection is not None:
-            connection.close()
+    except Exception:
+        logger.exception(
+            "Failed to mark email as sent for tester_id=%s email_type=%s",
+            tester_id,
+            email_type,
+        )
+        raise
