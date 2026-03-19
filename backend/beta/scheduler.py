@@ -5,6 +5,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from beta.emails import acceptance_email, feedback_email
 from beta.mailer import send_email
 from core.database import (
+    email_already_sent,
+    fetch_beta_tester_by_id,
     fetch_testers_due_for_interval,
     fetch_testers_missing_email,
     mark_email_sent,
@@ -13,6 +15,80 @@ from core.database import (
 logger = logging.getLogger(__name__)
 
 FEEDBACK_INTERVALS = [("day3", 3), ("day7", 7), ("day30", 30)]
+SUPPORTED_EMAIL_TYPES = {"acceptance", "day3", "day7", "day30"}
+
+
+def send_email_to_tester(
+    tester_id: int,
+    email_type: str,
+    force: bool = False,
+) -> dict:
+    if email_type not in SUPPORTED_EMAIL_TYPES:
+        raise ValueError(f"Unsupported email type: {email_type}")
+
+    tester = fetch_beta_tester_by_id(tester_id)
+    if tester is None:
+        return {
+            "ok": False,
+            "message": "Tester not found",
+            "tester_id": tester_id,
+            "email_type": email_type,
+        }
+
+    if not force and email_already_sent(tester_id, email_type):
+        return {
+            "ok": True,
+            "message": "Email already sent for this tester and stage",
+            "tester_id": tester_id,
+            "email_type": email_type,
+            "email": tester["email"],
+            "sent": False,
+            "skipped": True,
+        }
+
+    if email_type == "acceptance":
+        template = acceptance_email(tester.get("name") or "")
+    else:
+        template = feedback_email(tester.get("name") or "", email_type)
+
+    sent = send_email(
+        to=tester["email"],
+        subject=template["subject"],
+        html=template["html"],
+    )
+    if not sent:
+        logger.error(
+            "Failed to send %s email to tester_id=%s email=%s",
+            email_type,
+            tester_id,
+            tester["email"],
+        )
+        return {
+            "ok": False,
+            "message": "Email send failed",
+            "tester_id": tester_id,
+            "email_type": email_type,
+            "email": tester["email"],
+        }
+
+    if not force or not email_already_sent(tester_id, email_type):
+        mark_email_sent(tester_id, tester["email"], email_type)
+
+    logger.info(
+        "Sent %s email to tester_id=%s email=%s",
+        email_type,
+        tester_id,
+        tester["email"],
+    )
+    return {
+        "ok": True,
+        "message": "Email sent",
+        "tester_id": tester_id,
+        "email_type": email_type,
+        "email": tester["email"],
+        "sent": True,
+        "skipped": False,
+    }
 
 
 def poll_and_send_acceptance_emails() -> None:

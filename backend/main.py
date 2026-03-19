@@ -8,7 +8,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException #type: ignore
+from fastapi import FastAPI, HTTPException, Query #type: ignore
 from fastapi.middleware.cors import CORSMiddleware #type: ignore
 
 from app.api.routes import trending, health, votes, places, campuses, beta
@@ -16,6 +16,7 @@ from beta.mailer import is_mailer_configured
 from beta.scheduler import (
     dispatch_interval_emails,
     poll_and_send_acceptance_emails,
+    send_email_to_tester,
     start_scheduler,
 )
 from core.database import create_email_log_table, has_supabase_database_config
@@ -111,3 +112,32 @@ async def trigger_interval_emails():
         )
     dispatch_interval_emails()
     return {"ok": True, "message": "Interval email dispatch completed"}
+
+
+@app.post("/admin/trigger/tester/{tester_id}")
+async def trigger_tester_email(
+    tester_id: int,
+    email_type: str = Query("acceptance"),
+    force: bool = Query(False),
+):
+    if not _beta_email_system_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Beta email automation is not configured",
+        )
+    try:
+        result = send_email_to_tester(
+            tester_id=tester_id,
+            email_type=email_type,
+            force=force,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not result.get("ok") and result.get("message") == "Tester not found":
+        raise HTTPException(status_code=404, detail="Tester not found")
+
+    if not result.get("ok"):
+        raise HTTPException(status_code=500, detail="Email send failed")
+
+    return result

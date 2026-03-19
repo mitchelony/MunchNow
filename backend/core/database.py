@@ -38,6 +38,44 @@ def create_email_log_table() -> None:
         raise
 
 
+def fetch_beta_tester_by_id(tester_id: int) -> dict | None:
+    try:
+        supabase = get_supabase()
+        response = (
+            supabase.table("beta_testers")
+            .select("id, name, email, source, created_at")
+            .eq("id", tester_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        return rows[0] if rows else None
+    except Exception:
+        logger.exception("Failed to fetch beta tester by id=%s", tester_id)
+        raise
+
+
+def email_already_sent(tester_id: int, email_type: str) -> bool:
+    try:
+        supabase = get_supabase()
+        response = (
+            supabase.table("beta_email_log")
+            .select("id")
+            .eq("tester_id", tester_id)
+            .eq("email_type", email_type)
+            .limit(1)
+            .execute()
+        )
+        return bool(response.data)
+    except Exception:
+        logger.exception(
+            "Failed to check email log for tester_id=%s email_type=%s",
+            tester_id,
+            email_type,
+        )
+        raise
+
+
 def fetch_testers_missing_email(email_type: str) -> list[dict]:
     try:
         supabase = get_supabase()
