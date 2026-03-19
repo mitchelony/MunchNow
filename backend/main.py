@@ -4,65 +4,11 @@ from dotenv import load_dotenv  # type: ignore
 load_dotenv()
 load_dotenv(".env.local", override=True)
 
-import logging
-import os
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, HTTPException, Query #type: ignore
+from fastapi import FastAPI #type: ignore
 from fastapi.middleware.cors import CORSMiddleware #type: ignore
 
-from app.api.routes import trending, health, votes, places, campuses, beta
-from beta.mailer import is_mailer_configured
-from beta.scheduler import (
-    dispatch_interval_emails,
-    poll_and_send_acceptance_emails,
-    send_email_to_tester,
-    start_scheduler,
-)
-from core.database import create_email_log_table, has_supabase_database_config
-
-logger = logging.getLogger(__name__)
-
-
-def _beta_email_system_enabled() -> bool:
-    return has_supabase_database_config() and is_mailer_configured()
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    scheduler = None
-    app.state.beta_email_enabled = False
-    missing = [
-        name
-        for name in (
-            "SUPABASE_URL",
-            "SUPABASE_SERVICE_ROLE_KEY",
-            "RESEND_API_KEY",
-            "FROM_EMAIL",
-        )
-        if not os.getenv(name)
-    ]
-    if missing:
-        logger.warning(
-            "Beta email automation disabled; missing env vars: %s",
-            ", ".join(missing),
-        )
-    else:
-        try:
-            create_email_log_table()
-            scheduler = start_scheduler()
-            app.state.beta_scheduler = scheduler
-            app.state.beta_email_enabled = True
-        except Exception:
-            logger.exception(
-                "Beta email automation disabled due to startup failure"
-            )
-    try:
-        yield
-    finally:
-        if scheduler is not None:
-            scheduler.shutdown(wait=False)
-            logger.info("Stopped beta email scheduler")
+from app.api.routes import trending, health, votes, places, campuses, beta, admin_email
+from app.core.lifespan import lifespan
 
 
 app = FastAPI(lifespan=lifespan)
@@ -90,54 +36,4 @@ app.include_router(votes.router)
 app.include_router(places.router)
 app.include_router(campuses.router)
 app.include_router(beta.router)
-
-
-@app.post("/admin/trigger/acceptance")
-async def trigger_acceptance_emails():
-    if not _beta_email_system_enabled():
-        raise HTTPException(
-            status_code=503,
-            detail="Beta email automation is not configured",
-        )
-    poll_and_send_acceptance_emails()
-    return {"ok": True, "message": "Acceptance email dispatch completed"}
-
-
-@app.post("/admin/trigger/intervals")
-async def trigger_interval_emails():
-    if not _beta_email_system_enabled():
-        raise HTTPException(
-            status_code=503,
-            detail="Beta email automation is not configured",
-        )
-    dispatch_interval_emails()
-    return {"ok": True, "message": "Interval email dispatch completed"}
-
-
-@app.post("/admin/trigger/tester/{tester_id}")
-async def trigger_tester_email(
-    tester_id: int,
-    email_type: str = Query("acceptance"),
-    force: bool = Query(False),
-):
-    if not _beta_email_system_enabled():
-        raise HTTPException(
-            status_code=503,
-            detail="Beta email automation is not configured",
-        )
-    try:
-        result = send_email_to_tester(
-            tester_id=tester_id,
-            email_type=email_type,
-            force=force,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    if not result.get("ok") and result.get("message") == "Tester not found":
-        raise HTTPException(status_code=404, detail="Tester not found")
-
-    if not result.get("ok"):
-        raise HTTPException(status_code=500, detail="Email send failed")
-
-    return result
+app.include_router(admin_email.router)

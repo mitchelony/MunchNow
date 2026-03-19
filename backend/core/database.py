@@ -55,6 +55,22 @@ def fetch_beta_tester_by_id(tester_id: int) -> dict | None:
         raise
 
 
+def fetch_all_beta_testers() -> list[dict]:
+    try:
+        supabase = get_supabase()
+        response = (
+            supabase.table("beta_testers")
+            .select("id, name, email, source, created_at")
+            .order("created_at")
+            .order("id")
+            .execute()
+        )
+        return response.data or []
+    except Exception:
+        logger.exception("Failed to fetch all beta testers")
+        raise
+
+
 def email_already_sent(tester_id: int, email_type: str) -> bool:
     try:
         supabase = get_supabase()

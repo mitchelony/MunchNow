@@ -6,6 +6,7 @@ from beta.emails import acceptance_email, feedback_email
 from beta.mailer import send_email
 from core.database import (
     email_already_sent,
+    fetch_all_beta_testers,
     fetch_beta_tester_by_id,
     fetch_testers_due_for_interval,
     fetch_testers_missing_email,
@@ -89,6 +90,35 @@ def send_email_to_tester(
         "sent": True,
         "skipped": False,
     }
+
+
+def force_send_email_to_all_testers(email_type: str) -> dict:
+    if email_type not in SUPPORTED_EMAIL_TYPES:
+        raise ValueError(f"Unsupported email type: {email_type}")
+
+    testers = fetch_all_beta_testers()
+    summary = {
+        "ok": True,
+        "email_type": email_type,
+        "total": len(testers),
+        "sent": 0,
+        "failed": 0,
+        "results": [],
+    }
+
+    for tester in testers:
+        result = send_email_to_tester(
+            tester_id=tester["id"],
+            email_type=email_type,
+            force=True,
+        )
+        summary["results"].append(result)
+        if result.get("ok") and result.get("sent"):
+            summary["sent"] += 1
+        else:
+            summary["failed"] += 1
+
+    return summary
 
 
 def poll_and_send_acceptance_emails() -> None:
