@@ -107,11 +107,26 @@ def force_send_email_to_all_testers(email_type: str) -> dict:
     }
 
     for tester in testers:
-        result = send_email_to_tester(
-            tester_id=tester["id"],
-            email_type=email_type,
-            force=True,
-        )
+        tester_id = tester.get("id")
+        try:
+            result = send_email_to_tester(
+                tester_id=tester_id,
+                email_type=email_type,
+                force=True,
+            )
+        except Exception as exc:
+            logger.exception(
+                "Bulk force send failed for tester_id=%s email_type=%s",
+                tester_id,
+                email_type,
+            )
+            result = {
+                "ok": False,
+                "message": f"Unhandled error: {exc}",
+                "tester_id": tester_id,
+                "email_type": email_type,
+                "email": tester.get("email"),
+            }
         summary["results"].append(result)
         if result.get("ok") and result.get("sent"):
             summary["sent"] += 1
