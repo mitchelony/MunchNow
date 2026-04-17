@@ -107,7 +107,7 @@ export function usePullToRefresh({
       window.removeEventListener("touchend", finishGesture);
       window.removeEventListener("touchcancel", finishGesture);
     };
-  }, [disabled, isRefreshing, maxPull, readScrollTop, runRefresh, threshold]);
+  }, [disabled, isRefreshing, maxPull, threshold]);
 
   return { isArmed, isRefreshing, pullDistance };
 }

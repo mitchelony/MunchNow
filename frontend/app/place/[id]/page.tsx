@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PlaceDetailSkeleton, PullToRefreshIndicator } from "../../../components/Skeleton";
 import {
   getCampuses,
@@ -146,7 +146,7 @@ export default function PlacePage() {
     [campuses, campusId]
   );
 
-  const refreshPlace = useEffectEvent(async () => {
+  const refreshPlace = async () => {
     if (!numericPlaceId || !campusId) return;
     const requestId = ++requestIdRef.current;
     setRefreshing(true);
@@ -162,7 +162,7 @@ export default function PlacePage() {
       if (requestId !== requestIdRef.current) return;
       setRefreshing(false);
     }
-  });
+  };
 
   useEffect(() => {
     let isActive = true;
